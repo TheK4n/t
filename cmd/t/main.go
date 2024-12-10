@@ -150,6 +150,9 @@ func main() {
 		}
 
 		for _, de := range dirEntries {
+			if de.Name()[0] == '.' {
+				continue
+			}
 			if de.IsDir() {
 				namespaceDirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR, de.Name()))
 				namespaceNotesCount := 0
