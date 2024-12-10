@@ -71,15 +71,17 @@ func main() {
 			panic("not enougn args")
 		}
 
-		noteIndex, err := strconv.Atoi(os.Args[2])
-		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-			panic("wrong note index")
-		}
+		for _, inputedNoteIndex := range os.Args[2:] {
+			noteIndex, err := strconv.Atoi(inputedNoteIndex)
+			if err != nil || noteIndex > len(notes) || noteIndex < 1 {
+				panic("wrong note index")
+			}
 
-		noteToRemove := notes[noteIndex-1]
-		removeErr := os.Remove(path.Join(home, T_BASE_DIR, ns, noteToRemove))
-		if removeErr != nil {
-			panic(removeErr)
+			noteToRemove := notes[noteIndex-1]
+			removeErr := os.Remove(path.Join(home, T_BASE_DIR, ns, noteToRemove))
+			if removeErr != nil {
+				panic(removeErr)
+			}
 		}
 		os.Exit(0)
 
