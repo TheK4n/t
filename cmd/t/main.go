@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,12 +41,38 @@ NAMESPACES
     t=work t a fix bug 211   # add note in workspace 'work'
     t=work t                 # show notes in workspace 'work'`
 
+
+func findFileAbsPathUpTree(startdir string, filename string) string {
+	if startdir == "/" {
+		return ""
+	}
+	if _, err := os.Stat(path.Join(startdir, filename)); err == nil {
+		return path.Join(startdir, filename)
+	}
+	return findFileAbsPathUpTree(filepath.Dir(startdir), filename)
+}
+
 func main() {
 	home := os.Getenv("HOME")
 
-	ns := os.Getenv("t")
-	if ns == "" {
-		ns = DEFAULT_NAMESPACE
+	var ns string
+
+	if os.Getenv("t") == "" {
+		curdir, _ := os.Getwd()
+
+		envFile := findFileAbsPathUpTree(curdir, ".tns")
+		if envFile != "" {
+			if _, err := os.Stat(envFile); err == nil {
+				tnsFileContent, err := os.ReadFile(envFile)
+				if err == nil {
+					ns = strings.Trim(string(tnsFileContent), " \n")
+				}
+			}
+		} else {
+			ns = DEFAULT_NAMESPACE
+		}
+	} else {
+		ns = os.Getenv("t")
 	}
 
 	namespacePath := path.Join(home, T_BASE_DIR, ns)
