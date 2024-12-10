@@ -109,6 +109,18 @@ func main() {
 		}
 		os.Exit(0)
 
+	case "get":
+		if len(os.Args) < 3 {
+			panic("not enougn args")
+		}
+
+		content, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, os.Args[2]))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Print(string(content))
+		os.Exit(0)
+
 	default:
 		noteIndex, err := strconv.Atoi(cmd)
 		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
