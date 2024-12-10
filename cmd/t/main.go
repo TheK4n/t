@@ -27,7 +27,7 @@ func main() {
 
 	fstat, err := os.Stat(namespacePath)
 	if err != nil {
-		mkdirError := os.Mkdir(namespacePath, 0755)
+		mkdirError := os.MkdirAll(namespacePath, 0755)
 		if mkdirError != nil {
 			panic("Cant create namespace")
 		}
