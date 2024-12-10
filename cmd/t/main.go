@@ -159,7 +159,7 @@ func main() {
 				fmt.Printf("%s (%d)\n", de.Name(), namespaceNotesCount)
 			}
 		}
-		removeEmptyNamespaces(namespacePath)
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-h", "--help":
@@ -280,7 +280,10 @@ func removeEmptyNamespaces(dir string) error {
 	}
 
 	for _, de := range dirEntries {
-		subdirEntries, _ := os.ReadDir(path.Join(dir, de.Name()))
+		subdirEntries, err := os.ReadDir(path.Join(dir, de.Name()))
+		if err != nil {
+			continue
+		}
 		if len(subdirEntries) < 1 {
 			rmErr := os.Remove(path.Join(dir, de.Name()))
 			if rmErr != nil {
