@@ -15,6 +15,30 @@ import (
 const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
 const PATH_SEPARATOR_REPLACER = "%2F"
+const HELP_MESSAGE = `USAGE
+    T script for fast notes
+
+    t                            - Show notes in format '[INDEX] NOTE NAME (LINES)'
+    t get (NOTE)                 - Get note content
+    t show                       - Show notes in format '[INDEX] NOTE NAME (LINES)'
+    t (INDEX)                    - Show note content
+    t add (X X X)                - Add note with name X X X
+    t edit (INDEX)               - Edit note with INDEX by \$EDITOR
+    t done (INDEX) [INDEX] ...   - Delete notes with INDEXes
+    t namespaces                 - Show namespaces
+    t --help                     - Show this message
+
+    t a       - alias for add
+    t e       - alias for edit
+    t d       - alias for done
+    t delete  - alias for done
+    t ns      - alias for namespaces
+
+
+NAMESPACES
+    t namespaces             # show namespaces
+    t=work t a fix bug 211   # add note in workspace 'work'
+    t=work t                 # show notes in workspace 'work'`
 
 func main() {
 	home := os.Getenv("HOME")
@@ -166,30 +190,7 @@ func main() {
 		os.Exit(0)
 
 	case "-h", "--help":
-		fmt.Print(`USAGE
-    T script for fast notes
-
-    t                            - Show notes in format '[INDEX] NOTE NAME (LINES)'
-    t get (NOTE)                 - Get note content
-    t show                       - Show notes in format '[INDEX] NOTE NAME (LINES)'
-    t (INDEX)                    - Show note content
-    t add (X X X)                - Add note with name X X X
-    t edit (INDEX)               - Edit note with INDEX by \$EDITOR
-    t done (INDEX) [INDEX] ...   - Delete notes with INDEXes
-    t namespaces                 - Show namespaces
-    t --help                     - Show this message
-
-    t a       - alias for add
-    t e       - alias for edit
-    t d       - alias for done
-    t delete  - alias for done
-    t ns      - alias for namespaces
-
-
-NAMESPACES
-    t namespaces             # show namespaces
-    t=work t a fix bug 211   # add note in workspace 'work'
-    t=work t                 # show notes in workspace 'work'`)
+		fmt.Print(HELP_MESSAGE)
 
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
