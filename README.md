@@ -35,7 +35,7 @@ go build ./cmd/t
 
 ### Install by golang (recommended):
 ```sh
-go install https://github.com/thek4n/t/cmd/t@v0.1.2
+go install github.com/thek4n/t/cmd/t@v0.1.2
 ```
 
 ### Download binary
