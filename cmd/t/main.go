@@ -14,7 +14,7 @@ import (
 
 const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
-const PATH_SEPARATOR_REPLACER="%2F"
+const PATH_SEPARATOR_REPLACER = "%2F"
 
 func main() {
 	home := os.Getenv("HOME")
@@ -37,7 +37,6 @@ func main() {
 			panic("Selected namespace not a directory")
 		}
 	}
-
 
 	notes, err := getNotesInDirSorted(namespacePath)
 	if err != nil {
