@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
+	"strconv"
 )
-
 
 const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
-
 
 func main() {
 	home := os.Getenv("HOME")
@@ -20,8 +21,6 @@ func main() {
 		ns = DEFAULT_NAMESPACE
 	}
 
-	fmt.Printf("\033[1;34m# %s\033[0m\n", ns)
-
 	namespacePath := path.Join(home, T_BASE_DIR, ns)
 
 	notes, err := getNotesInDirSorted(namespacePath)
@@ -29,11 +28,47 @@ func main() {
 		panic(err)
 	}
 
-	for i, note := range notes {
-		fmt.Printf("[%d] %s\n", i+1, note)
+	if len(os.Args) < 2 {
+		fmt.Printf("\033[1;34m# %s\033[0m\n", ns)
+		for i, note := range notes {
+			noteLines, err := countFileLines(path.Join(home, T_BASE_DIR, ns, note))
+			if err != nil {
+				panic(err)
+			}
+
+			var noteLinesFormatted string
+
+			if noteLines > 70 {
+				noteLinesFormatted = "..."
+			} else if noteLines == 0 {
+				noteLinesFormatted = "-"
+			} else {
+				noteLinesFormatted = fmt.Sprint(noteLines + 1)
+			}
+
+			fmt.Printf("[%d] %s (%s)\n", i+1, note, noteLinesFormatted)
+		}
+		os.Exit(0)
+	}
+
+	cmd := os.Args[1]
+	switch cmd {
+	default:
+		noteIndex, err := strconv.Atoi(cmd)
+		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
+			panic("wrong note index")
+		}
+
+		noteToRead := notes[noteIndex-1]
+		fmt.Printf("\033[1;34m# %s\033[0m\n\n", noteToRead)
+
+		noteContent, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, noteToRead))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Print(string(noteContent))
 	}
 }
-
 
 func getNotesInDirSorted(namespacePath string) ([]string, error) {
 	dirEntries, err := os.ReadDir(namespacePath)
@@ -48,6 +83,10 @@ func getNotesInDirSorted(namespacePath string) ([]string, error) {
 
 	result := make([]string, len(dirEntries))
 	for i, de := range dirEntries {
+		if de.IsDir() {
+			continue
+		}
+
 		result[i] = de.Name()
 	}
 
@@ -68,4 +107,28 @@ func sortNotes(dirEntries []os.DirEntry) error {
 		return iInfo.ModTime().Unix() > jInfo.ModTime().Unix()
 	})
 	return sortErr
+}
+
+func countFileLines(filePath string) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	buf := make([]byte, 1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := file.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+
+		case err != nil:
+			return count, err
+		}
+	}
 }
