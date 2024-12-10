@@ -25,6 +25,19 @@ func main() {
 
 	namespacePath := path.Join(home, T_BASE_DIR, ns)
 
+	fstat, err := os.Stat(namespacePath)
+	if err != nil {
+		mkdirError := os.Mkdir(namespacePath, 0755)
+		if mkdirError != nil {
+			panic("Cant create namespace")
+		}
+	} else {
+		if !fstat.IsDir() {
+			panic("Selected namespace not a directory")
+		}
+	}
+
+
 	notes, err := getNotesInDirSorted(namespacePath)
 	if err != nil {
 		panic(err)
@@ -50,6 +63,7 @@ func main() {
 
 			fmt.Printf("[%d] %s (%s)\n", i+1, note, noteLinesFormatted)
 		}
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 
@@ -64,6 +78,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "d", "done", "delete":
@@ -83,6 +98,7 @@ func main() {
 				panic(removeErr)
 			}
 		}
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "e", "edit":
@@ -107,6 +123,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "get":
@@ -119,6 +136,7 @@ func main() {
 			panic(err)
 		}
 		fmt.Print(string(content))
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "ns", "namespaces":
@@ -137,6 +155,36 @@ func main() {
 				fmt.Printf("%s (%d)\n", de.Name(), namespaceNotesCount)
 			}
 		}
+		removeEmptyNamespaces(namespacePath)
+		os.Exit(0)
+
+	case "-h", "--help":
+		fmt.Print(`USAGE
+    T script for fast notes
+
+    t                            - Show notes in format '[INDEX] NOTE NAME (LINES)'
+    t get (NOTE)                 - Get note content
+    t show                       - Show notes in format '[INDEX] NOTE NAME (LINES)'
+    t (INDEX)                    - Show note content
+    t add (X X X)                - Add note with name X X X
+    t edit (INDEX)               - Edit note with INDEX by \$EDITOR
+    t done (INDEX) [INDEX] ...   - Delete notes with INDEXes
+    t namespaces                 - Show namespaces
+    t --help                     - Show this message
+
+    t a       - alias for add
+    t e       - alias for edit
+    t d       - alias for done
+    t delete  - alias for done
+    t ns      - alias for namespaces
+
+
+NAMESPACES
+    t namespaces             # show namespaces
+    t=work t a fix bug 211   # add note in workspace 'work'
+    t=work t                 # show notes in workspace 'work'`)
+
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	default:
@@ -153,6 +201,7 @@ func main() {
 			panic(err)
 		}
 		fmt.Print(string(noteContent))
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 }
@@ -218,4 +267,23 @@ func countFileLines(filePath string) (int, error) {
 			return count, err
 		}
 	}
+}
+
+func removeEmptyNamespaces(dir string) error {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, de := range dirEntries {
+		subdirEntries, _ := os.ReadDir(path.Join(dir, de.Name()))
+		if len(subdirEntries) < 1 {
+			rmErr := os.Remove(path.Join(dir, de.Name()))
+			if rmErr != nil {
+				panic(rmErr)
+			}
+		}
+	}
+
+	return nil
 }
