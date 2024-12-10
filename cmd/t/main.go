@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"sort"
 	"strconv"
@@ -64,6 +65,7 @@ func main() {
 			panic(err)
 		}
 		os.Exit(0)
+
 	case "d", "done", "delete":
 		if len(os.Args) < 3 {
 			panic("not enougn args")
@@ -79,6 +81,31 @@ func main() {
 		if removeErr != nil {
 			panic(removeErr)
 		}
+		os.Exit(0)
+
+	case "e", "edit":
+		if len(os.Args) < 3 {
+			panic("not enougn args")
+		}
+
+		noteIndex, err := strconv.Atoi(os.Args[2])
+		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
+			panic("wrong note index")
+		}
+
+		noteIndexToEdit := notes[noteIndex-1]
+		noteToEdit := path.Join(home, T_BASE_DIR, ns, noteIndexToEdit)
+
+		cmd := exec.Command(os.Getenv("EDITOR"), noteToEdit)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err = cmd.Run()
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(0)
 
 	default:
 		noteIndex, err := strconv.Atoi(cmd)
