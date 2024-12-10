@@ -14,6 +14,7 @@ import (
 
 const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
+const PATH_SEPARATOR_REPLACER="%2F"
 
 func main() {
 	home := os.Getenv("HOME")
@@ -51,17 +52,18 @@ func main() {
 				panic(err)
 			}
 
-			var noteLinesFormatted string
+			var formattedNoteLines string
 
 			if noteLines > 70 {
-				noteLinesFormatted = "..."
+				formattedNoteLines = "..."
 			} else if noteLines == 0 {
-				noteLinesFormatted = "-"
+				formattedNoteLines = "-"
 			} else {
-				noteLinesFormatted = fmt.Sprint(noteLines + 1)
+				formattedNoteLines = fmt.Sprint(noteLines + 1)
 			}
 
-			fmt.Printf("[%d] %s (%s)\n", i+1, note, noteLinesFormatted)
+			formattedNoteName := strings.ReplaceAll(note, PATH_SEPARATOR_REPLACER, "/")
+			fmt.Printf("[%d] %s (%s)\n", i+1, formattedNoteName, formattedNoteLines)
 		}
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
@@ -71,10 +73,13 @@ func main() {
 	switch cmd {
 	case "a", "add":
 		if len(os.Args) < 3 {
-			panic("not enougn args")
+			panic("not enough args")
 		}
 
-		err := os.WriteFile(path.Join(home, T_BASE_DIR, ns, strings.Join(os.Args[2:], " ")), []byte{}, 0644)
+		newNoteName := strings.Join(os.Args[2:], " ")
+		newNoteName = strings.ReplaceAll(newNoteName, "/", PATH_SEPARATOR_REPLACER)
+
+		err := os.WriteFile(path.Join(home, T_BASE_DIR, ns, newNoteName), []byte{}, 0644)
 		if err != nil {
 			panic(err)
 		}
