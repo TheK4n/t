@@ -22,7 +22,7 @@ Simple task tracker
 
 ### Dependencies
 
-Dependencies:
+Build dependencies:
 * golang
 
 

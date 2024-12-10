@@ -1,5 +1,21 @@
 #!/bin/sh
 
-GOOS=linux GOARCH=amd64 go build -o ./t ./cmd/t
-strip ./t
-tar czf "t_v$(cat VERSION)_linux_amd64.tar.gz" ./t
+
+build() {
+    arch="${1}"
+    GOOS=linux GOARCH="${arch}" go build -ldflags "-w -s" -o ./t ./cmd/t
+}
+
+pack() {
+    arch="${1}"
+    tar czf "t_v$(cat VERSION)_linux_${arch}.tar.gz" ./t
+}
+
+build_and_pack() {
+    arch="${1}"
+    build "${arch}"
+    pack "${arch}"
+}
+
+build_and_pack "amd64"
+build_and_pack "arm64"

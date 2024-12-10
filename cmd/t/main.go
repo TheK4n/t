@@ -16,6 +16,7 @@ import (
 const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
 const PATH_SEPARATOR_REPLACER = "%2F"
+const ENVFILE = ".tns"
 const HELP_MESSAGE = `USAGE
     T script for fast notes
 
@@ -41,17 +42,6 @@ NAMESPACES
     t=work t a fix bug 211   # add note in workspace 'work'
     t=work t                 # show notes in workspace 'work'`
 
-
-func findFileAbsPathUpTree(startdir string, filename string) string {
-	if startdir == "/" {
-		return ""
-	}
-	if _, err := os.Stat(path.Join(startdir, filename)); err == nil {
-		return path.Join(startdir, filename)
-	}
-	return findFileAbsPathUpTree(filepath.Dir(startdir), filename)
-}
-
 func main() {
 	home := os.Getenv("HOME")
 
@@ -60,12 +50,12 @@ func main() {
 	if os.Getenv("t") == "" {
 		curdir, _ := os.Getwd()
 
-		envFile := findFileAbsPathUpTree(curdir, ".tns")
-		if envFile != "" {
-			if _, err := os.Stat(envFile); err == nil {
-				tnsFileContent, err := os.ReadFile(envFile)
+		foundEnvFile := findFileAbsPathUpTree(curdir, ENVFILE)
+		if foundEnvFile != "" {
+			if _, err := os.Stat(foundEnvFile); err == nil {
+				envFileContent, err := os.ReadFile(foundEnvFile)
 				if err == nil {
-					ns = strings.Trim(string(tnsFileContent), " \n")
+					ns = strings.Trim(string(envFileContent), " \n")
 				}
 			}
 		} else {
@@ -239,6 +229,16 @@ func main() {
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
+}
+
+func findFileAbsPathUpTree(startdir string, filename string) string {
+	if startdir == "/" {
+		return ""
+	}
+	if _, err := os.Stat(path.Join(startdir, filename)); err == nil {
+		return path.Join(startdir, filename)
+	}
+	return findFileAbsPathUpTree(filepath.Dir(startdir), filename)
 }
 
 func getNotesInDirSorted(namespacePath string) ([]string, error) {
