@@ -121,6 +121,24 @@ func main() {
 		fmt.Print(string(content))
 		os.Exit(0)
 
+	case "ns", "namespaces":
+		dirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR))
+		if err != nil {
+			panic(err)
+		}
+
+		for _, de := range dirEntries {
+			if de.IsDir() {
+				namespaceDirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR, de.Name()))
+				namespaceNotesCount := 0
+				if err == nil {
+					namespaceNotesCount = len(namespaceDirEntries)
+				}
+				fmt.Printf("%s (%d)\n", de.Name(), namespaceNotesCount)
+			}
+		}
+		os.Exit(0)
+
 	default:
 		noteIndex, err := strconv.Atoi(cmd)
 		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
