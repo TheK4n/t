@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 const T_BASE_DIR = ".t"
@@ -53,6 +54,32 @@ func main() {
 
 	cmd := os.Args[1]
 	switch cmd {
+	case "a", "add":
+		if len(os.Args) < 3 {
+			panic("not enougn args")
+		}
+
+		err := os.WriteFile(path.Join(home, T_BASE_DIR, ns, strings.Join(os.Args[2:], " ")), []byte{}, 0644)
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(0)
+	case "d", "done", "delete":
+		if len(os.Args) < 3 {
+			panic("not enougn args")
+		}
+
+		noteIndex, err := strconv.Atoi(os.Args[2])
+		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
+			panic("wrong note index")
+		}
+
+		noteToRemove := notes[noteIndex-1]
+		removeErr := os.Remove(path.Join(home, T_BASE_DIR, ns, noteToRemove))
+		if removeErr != nil {
+			panic(removeErr)
+		}
+
 	default:
 		noteIndex, err := strconv.Atoi(cmd)
 		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
@@ -67,6 +94,7 @@ func main() {
 			panic(err)
 		}
 		fmt.Print(string(noteContent))
+		os.Exit(0)
 	}
 }
 
