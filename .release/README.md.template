@@ -49,6 +49,7 @@ tar xzf t_%VERSION%_linux_amd64.tar.gz
 ```sh
 t --help
 t a Buy bread  # Add task
-t   # Show tasks
-t 1 # Show task with index 1
+t      # Show tasks
+t e 1  # Edit task content
+t 1    # Show task content with index 1
 ```
