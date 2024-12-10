@@ -1,0 +1,3 @@
+* Check version changed in file VERSION
+* Check README.md genereated from template (replace version placeholders)
+* Check annotated tag on commit with version
