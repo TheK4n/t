@@ -47,10 +47,16 @@ NAMESPACES
 
 func main() {
 	home := os.Getenv("HOME")
+	if home == "" {
+		die("HOME environment variable is invalid")
+	}
 
-	var ns string
+	var namespace string
 
-	if os.Getenv("t") == "" {
+	tEnv := os.Getenv("t")
+	if tEnv != "" {
+		namespace = tEnv
+	} else {
 		curdir, _ := os.Getwd()
 
 		foundEnvFile := findFileUpTree(curdir, ENVFILE)
@@ -58,17 +64,15 @@ func main() {
 			if _, err := os.Stat(foundEnvFile); err == nil {
 				envFileContent, err := os.ReadFile(foundEnvFile)
 				if err == nil {
-					ns = strings.Trim(string(envFileContent), " \n")
+					namespace = strings.Trim(string(envFileContent), " \n")
 				}
 			}
 		} else {
-			ns = DEFAULT_NAMESPACE
+			namespace = DEFAULT_NAMESPACE
 		}
-	} else {
-		ns = os.Getenv("t")
 	}
 
-	namespacePath := path.Join(home, T_BASE_DIR, ns)
+	namespacePath := path.Join(home, T_BASE_DIR, namespace)
 
 	fstat, err := os.Stat(namespacePath)
 	if err != nil {
@@ -88,7 +92,7 @@ func main() {
 	}
 
 	if len(os.Args) < 2 {
-		showTasks(tasks, path.Join(home, T_BASE_DIR, ns))
+		showTasks(tasks, path.Join(home, T_BASE_DIR, namespace))
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
@@ -96,7 +100,7 @@ func main() {
 	cmd := os.Args[1]
 	switch cmd {
 	case "show":
-		showTasks(tasks, path.Join(home, T_BASE_DIR, ns))
+		showTasks(tasks, path.Join(home, T_BASE_DIR, namespace))
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
@@ -105,7 +109,7 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := addTask(path.Join(home, T_BASE_DIR, ns), os.Args[2:])
+		err := addTask(path.Join(home, T_BASE_DIR, namespace), os.Args[2:])
 		if err != nil {
 			die("Error adding task: %s", err)
 		}
@@ -118,7 +122,7 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := deleteTasksByIndexes(os.Args[2:], tasks, path.Join(home, T_BASE_DIR, ns))
+		err := deleteTasksByIndexes(os.Args[2:], tasks, path.Join(home, T_BASE_DIR, namespace))
 		if err != nil {
 			die("Error deleting task: %s", err)
 		}
@@ -131,7 +135,7 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := editTaskByIndex(os.Args[2], tasks, path.Join(home, T_BASE_DIR, ns))
+		err := editTaskByIndex(os.Args[2], tasks, path.Join(home, T_BASE_DIR, namespace))
 		if err != nil {
 			die("Error editing task: %s", err)
 		}
@@ -144,7 +148,7 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := showTaskContentByName(path.Join(home, T_BASE_DIR, ns), os.Args[2])
+		err := showTaskContentByName(path.Join(home, T_BASE_DIR, namespace), os.Args[2])
 		if err != nil {
 			die("Error reading task: %s", err)
 		}
@@ -174,7 +178,7 @@ func main() {
 		os.Exit(0)
 
 	default:
-		err := showTaskContentByIndex(cmd, tasks, path.Join(home, T_BASE_DIR, ns))
+		err := showTaskContentByIndex(cmd, tasks, path.Join(home, T_BASE_DIR, namespace))
 		if err != nil {
 			die("Error: %s", err)
 		}
