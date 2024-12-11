@@ -69,7 +69,11 @@ func main() {
 		die("HOME environment variable is invalid")
 	}
 
-	namespace := getNamespaceFromEnvOrFromFile()
+	namespace, err := getNamespaceFromEnvOrFromFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %s, using default namespace (%s)\n", err, DEFAULT_NAMESPACE)
+	}
+
 	namespacePath := path.Join(home, T_BASE_DIR, namespace)
 
 	createNamespaceErr := createDirectoryIfNotExists(namespacePath)
@@ -179,25 +183,25 @@ func main() {
 	}
 }
 
-func getNamespaceFromEnvOrFromFile() string {
+func getNamespaceFromEnvOrFromFile() (string, error) {
 	tEnv := os.Getenv("t")
 	if tEnv != "" {
-		return tEnv
+		return tEnv, nil
 	}
 
 	curdir, _ := os.Getwd()
 	foundEnvFile := findFileUpTree(curdir, ENVFILE)
 
 	if foundEnvFile == "" {
-		return DEFAULT_NAMESPACE
+		return DEFAULT_NAMESPACE, nil
 	}
 
 	envFileContent, err := os.ReadFile(foundEnvFile)
 	if err != nil {
-		return DEFAULT_NAMESPACE
+		return DEFAULT_NAMESPACE, fmt.Errorf("error reading env file: %s", foundEnvFile)
 	}
 
-	return strings.Trim(string(envFileContent), " \n")
+	return strings.Trim(string(envFileContent), " \n"), nil
 }
 
 func showTasks(tasks []string, namespace string) {
