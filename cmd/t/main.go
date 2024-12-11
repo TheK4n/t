@@ -105,7 +105,11 @@ func main() {
 			die("Not enough args")
 		}
 
-		addTask(path.Join(home, T_BASE_DIR, ns), os.Args[2:])
+		err := addTask(path.Join(home, T_BASE_DIR, ns), os.Args[2:])
+		if err != nil {
+			die("Error adding task: %s", err)
+		}
+
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
@@ -199,14 +203,16 @@ func showTasks(tasks []string, namespace string) {
 	}
 }
 
-func addTask(namespace string, taskName []string) {
+func addTask(namespace string, taskName []string) error {
 	newTaskName := strings.Join(taskName, " ")
 	newTaskName = strings.ReplaceAll(newTaskName, "/", PATH_SEPARATOR_REPLACER)
 
 	err := os.WriteFile(path.Join(namespace, newTaskName), []byte{}, 0644)
 	if err != nil {
-		die("Error write task: %s", err)
+		return fmt.Errorf("Error write task: %s", err)
 	}
+
+	return nil
 }
 
 func deleteTasksByIndexes(indexes []string, tasks []string, namespace string) error {
