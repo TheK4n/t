@@ -60,24 +60,6 @@ NAMESPACE FILE
     ...
 `
 
-func createDirectoryIfNotExists(namespacePath string) error {
-	fstat, err := os.Stat(namespacePath)
-
-	if err != nil {
-		mkdirError := os.MkdirAll(namespacePath, 0755)
-		if mkdirError != nil {
-			return fmt.Errorf("Cant create directory: %s", mkdirError)
-		}
-		return nil
-	}
-
-	if !fstat.IsDir() {
-		return fmt.Errorf("Error: file %s already exists, and its not a directory", namespacePath)
-	}
-
-	return nil
-}
-
 func main() {
 	home := os.Getenv("HOME")
 	if home == "" {
@@ -217,6 +199,24 @@ func getNamespaceFromEnvOrFromFile() (string, error) {
 	}
 
 	return strings.Trim(string(envFileContent), " \n"), nil
+}
+
+func createDirectoryIfNotExists(namespacePath string) error {
+	fstat, err := os.Stat(namespacePath)
+
+	if err != nil {
+		mkdirError := os.MkdirAll(namespacePath, 0755)
+		if mkdirError != nil {
+			return fmt.Errorf("Cant create directory: %s", mkdirError)
+		}
+		return nil
+	}
+
+	if !fstat.IsDir() {
+		return fmt.Errorf("Error: file %s already exists, and its not a directory", namespacePath)
+	}
+
+	return nil
 }
 
 func showTasks(tasks []string, namespace string) {
