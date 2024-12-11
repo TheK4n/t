@@ -35,13 +35,13 @@ go build ./cmd/t
 
 ### Install by golang (recommended):
 ```sh
-go install github.com/thek4n/t/cmd/t@v0.2.0
+go install github.com/thek4n/t/cmd/t@v0.2.1
 ```
 
 ### Download binary
 ```sh
-wget https://github.com/TheK4n/t/releases/download/v0.2.0/t_v0.2.0_linux_amd64.tar.gz
-tar xzf t_v0.2.0_linux_amd64.tar.gz
+wget https://github.com/TheK4n/t/releases/download/v0.2.1/t_v0.2.1_linux_amd64.tar.gz
+tar xzf t_v0.2.1_linux_amd64.tar.gz
 ```
 
 

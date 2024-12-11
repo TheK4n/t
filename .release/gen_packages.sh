@@ -3,6 +3,7 @@
 
 build() {
     arch="${1}"
+    go generate ./...
     GOOS=linux GOARCH="${arch}" go build -ldflags "-w -s" -o ./t ./cmd/t
 }
 

@@ -1,3 +1,5 @@
+//go:generate go run version_gen.go
+
 package main
 
 import (
@@ -17,18 +19,19 @@ const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
 const PATH_SEPARATOR_REPLACER = "%2F"
 const ENVFILE = ".tns"
-const HELP_MESSAGE = `USAGE
-    T script for fast notes
+const HELP_MESSAGE = `T simple task tracker
+USAGE
 
-    t                            - Show notes in format '[INDEX] NOTE NAME (LINES)'
-    t get (NOTE)                 - Get note content
-    t show                       - Show notes in format '[INDEX] NOTE NAME (LINES)'
-    t (INDEX)                    - Show note content
-    t add (X X X)                - Add note with name X X X
-    t edit (INDEX)               - Edit note with INDEX by \$EDITOR
-    t done (INDEX) [INDEX] ...   - Delete notes with INDEXes
+    t                            - Show tasks in format '[INDEX] NOTE NAME (LINES)'
+    t get (NOTE)                 - Get task content
+    t show                       - Show tasks in format '[INDEX] NOTE NAME (LINES)'
+    t (INDEX)                    - Show task content
+    t add (X X X)                - Add task with name X X X
+    t edit (INDEX)               - Edit task with INDEX by \$EDITOR
+    t done (INDEX) [INDEX] ...   - Delete tasks with INDEXes
     t namespaces                 - Show namespaces
     t --help                     - Show this message
+    t --version                  - Show version
 
     t a       - alias for add
     t e       - alias for edit
@@ -39,8 +42,8 @@ const HELP_MESSAGE = `USAGE
 
 NAMESPACES
     t namespaces             # show namespaces
-    t=work t a fix bug 211   # add note in workspace 'work'
-    t=work t                 # show notes in workspace 'work'`
+    t=work t a fix bug 211   # add task in workspace 'work'
+    t=work t                 # show tasks in workspace 'work'`
 
 func main() {
 	home := os.Getenv("HOME")
@@ -208,6 +211,12 @@ func main() {
 
 	case "-h", "--help":
 		fmt.Print(HELP_MESSAGE)
+
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		os.Exit(0)
+
+	case "-v", "--version":
+		fmt.Print(version)
 
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
