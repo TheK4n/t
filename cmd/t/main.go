@@ -20,8 +20,8 @@ const DEFAULT_NAMESPACE = "def"
 const PATH_SEPARATOR_REPLACER = "%2F"
 const ENVFILE = ".tns"
 const HELP_MESSAGE = `T simple task tracker
-USAGE
 
+USAGE
     t                            - Show tasks in format '[INDEX] TASK NAME (LINES)'
     t get (TASK)                 - Get task content
     t show                       - Show tasks in format '[INDEX] TASK NAME (LINES)'
@@ -39,11 +39,26 @@ USAGE
     t delete  - alias for done
     t ns      - alias for namespaces
 
-
 NAMESPACES
     t namespaces             # show namespaces
     t=work t a fix bug 211   # add task in workspace 'work'
-    t=work t                 # show tasks in workspace 'work'`
+    t=work t                 # show tasks in workspace 'work'
+
+NAMESPACE FILE
+    File with name '.tns' can be in current directory or any directory up the tree
+    File contains name of namespace
+    Environment variable 't' overwrite using this file
+
+    Example:
+    $ cat .tns
+    dotfiles
+    $ t show
+    # dotfiles
+    ...
+    $ t=storage t
+    # storage
+    ...
+`
 
 func createDirectoryIfNotExists(namespacePath string) error {
 	fstat, err := os.Stat(namespacePath)
