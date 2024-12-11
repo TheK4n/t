@@ -45,45 +45,36 @@ NAMESPACES
     t=work t a fix bug 211   # add task in workspace 'work'
     t=work t                 # show tasks in workspace 'work'`
 
+func createDirectoryIfNotExists(namespacePath string) error {
+	fstat, err := os.Stat(namespacePath)
+
+	if err != nil {
+		mkdirError := os.MkdirAll(namespacePath, 0755)
+		if mkdirError != nil {
+			return fmt.Errorf("Cant create directory: %s", mkdirError)
+		}
+		return nil
+	}
+
+	if !fstat.IsDir() {
+		return fmt.Errorf("Error: file %s already exists, and its not a directory", namespacePath)
+	}
+
+	return nil
+}
+
 func main() {
 	home := os.Getenv("HOME")
 	if home == "" {
 		die("HOME environment variable is invalid")
 	}
 
-	var namespace string
-
-	tEnv := os.Getenv("t")
-	if tEnv != "" {
-		namespace = tEnv
-	} else {
-		curdir, _ := os.Getwd()
-
-		foundEnvFile := findFileUpTree(curdir, ENVFILE)
-		if foundEnvFile != "" {
-			if _, err := os.Stat(foundEnvFile); err == nil {
-				envFileContent, err := os.ReadFile(foundEnvFile)
-				if err == nil {
-					namespace = strings.Trim(string(envFileContent), " \n")
-				}
-			}
-		} else {
-			namespace = DEFAULT_NAMESPACE
-		}
-	}
-
+	namespace := getNamespaceFromEnvOrFromFile()
 	namespacePath := path.Join(home, T_BASE_DIR, namespace)
 
-	fstat, err := os.Stat(namespacePath)
-	if err != nil {
-		mkdirError := os.MkdirAll(namespacePath, 0755)
-		if mkdirError != nil {
-			die("Cant create namespace: %s", mkdirError)
-		}
-	} else {
-		if !fstat.IsDir() {
-			die("Selected namespace not a directory")
-		}
+	createNamespaceErr := createDirectoryIfNotExists(namespacePath)
+	if createNamespaceErr != nil {
+		die("Error creating namespace: %s", createNamespaceErr)
 	}
 
 	tasks, err := getTasksInNamespaceSorted(namespacePath)
@@ -188,23 +179,47 @@ func main() {
 	}
 }
 
+func getNamespaceFromEnvOrFromFile() string {
+	tEnv := os.Getenv("t")
+	if tEnv != "" {
+		return tEnv
+	}
+
+	curdir, _ := os.Getwd()
+	foundEnvFile := findFileUpTree(curdir, ENVFILE)
+
+	if foundEnvFile == "" {
+		return DEFAULT_NAMESPACE
+	}
+
+	envFileContent, err := os.ReadFile(foundEnvFile)
+	if err != nil {
+		return DEFAULT_NAMESPACE
+	}
+
+	return strings.Trim(string(envFileContent), " \n")
+}
+
 func showTasks(tasks []string, namespace string) {
 	fmt.Printf("\033[1;34m# %s\033[0m\n", path.Base(namespace))
 	for i, task := range tasks {
 		taskLines, _ := countFileLines(path.Join(namespace, task))
-		var formattedTaskLines string
 
-		if taskLines > 70 {
-			formattedTaskLines = "..."
-		} else if taskLines == 0 {
-			formattedTaskLines = "-"
-		} else {
-			formattedTaskLines = fmt.Sprint(taskLines + 1)
-		}
+		formattedTaskLines := formatLinesCount(taskLines)
 
 		formattedTaskName := strings.ReplaceAll(task, PATH_SEPARATOR_REPLACER, "/")
 		fmt.Printf("[%d] %s (%s)\n", i+1, formattedTaskName, formattedTaskLines)
 	}
+}
+
+func formatLinesCount(lines int) string {
+	if lines > 70 {
+		return "..."
+	}
+	if lines == 0 {
+		return "-"
+	}
+	return fmt.Sprint(lines + 1)
 }
 
 func addTask(namespace string, taskName []string) error {
