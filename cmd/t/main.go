@@ -22,9 +22,9 @@ const ENVFILE = ".tns"
 const HELP_MESSAGE = `T simple task tracker
 USAGE
 
-    t                            - Show tasks in format '[INDEX] NOTE NAME (LINES)'
-    t get (NOTE)                 - Get task content
-    t show                       - Show tasks in format '[INDEX] NOTE NAME (LINES)'
+    t                            - Show tasks in format '[INDEX] TASK NAME (LINES)'
+    t get (TASK)                 - Get task content
+    t show                       - Show tasks in format '[INDEX] TASK NAME (LINES)'
     t (INDEX)                    - Show task content
     t add (X X X)                - Add task with name X X X
     t edit (INDEX)               - Edit task with INDEX by \$EDITOR
@@ -53,7 +53,7 @@ func main() {
 	if os.Getenv("t") == "" {
 		curdir, _ := os.Getwd()
 
-		foundEnvFile := findFileAbsPathUpTree(curdir, ENVFILE)
+		foundEnvFile := findFileUpTree(curdir, ENVFILE)
 		if foundEnvFile != "" {
 			if _, err := os.Stat(foundEnvFile); err == nil {
 				envFileContent, err := os.ReadFile(foundEnvFile)
@@ -82,181 +82,246 @@ func main() {
 		}
 	}
 
-	notes, err := getNotesInDirSorted(namespacePath)
+	tasks, err := getTasksInNamespaceSorted(namespacePath)
 	if err != nil {
 		die("Error get tasks: %s", err)
 	}
 
 	if len(os.Args) < 2 {
-		fmt.Printf("\033[1;34m# %s\033[0m\n", ns)
-		for i, note := range notes {
-			noteLines, err := countFileLines(path.Join(home, T_BASE_DIR, ns, note))
-			if err != nil {
-				die("Error counting task lines: %s", err)
-			}
-
-			var formattedNoteLines string
-
-			if noteLines > 70 {
-				formattedNoteLines = "..."
-			} else if noteLines == 0 {
-				formattedNoteLines = "-"
-			} else {
-				formattedNoteLines = fmt.Sprint(noteLines + 1)
-			}
-
-			formattedNoteName := strings.ReplaceAll(note, PATH_SEPARATOR_REPLACER, "/")
-			fmt.Printf("[%d] %s (%s)\n", i+1, formattedNoteName, formattedNoteLines)
-		}
+		showTasks(tasks, path.Join(home, T_BASE_DIR, ns))
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 
 	cmd := os.Args[1]
 	switch cmd {
+	case "show":
+		showTasks(tasks, path.Join(home, T_BASE_DIR, ns))
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		os.Exit(0)
+
 	case "a", "add":
 		if len(os.Args) < 3 {
 			die("Not enough args")
 		}
 
-		newNoteName := strings.Join(os.Args[2:], " ")
-		newNoteName = strings.ReplaceAll(newNoteName, "/", PATH_SEPARATOR_REPLACER)
-
-		err := os.WriteFile(path.Join(home, T_BASE_DIR, ns, newNoteName), []byte{}, 0644)
-		if err != nil {
-			die("Error write task: %s", err)
-		}
+		addTask(path.Join(home, T_BASE_DIR, ns), os.Args[2:])
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "d", "done", "delete":
 		if len(os.Args) < 3 {
-			die("Not enougn args")
+			die("Not enough args")
 		}
 
-		for _, inputedNoteIndex := range os.Args[2:] {
-			noteIndex, err := strconv.Atoi(inputedNoteIndex)
-			if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-				die("Wrong note index")
-			}
-
-			noteToRemove := notes[noteIndex-1]
-			removeErr := os.Remove(path.Join(home, T_BASE_DIR, ns, noteToRemove))
-			if removeErr != nil {
-				die("Error remove task: %s", removeErr)
-			}
+		err := deleteTasksByIndexes(os.Args[2:], tasks, path.Join(home, T_BASE_DIR, ns))
+		if err != nil {
+			die("Error deleting task: %s", err)
 		}
+
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "e", "edit":
 		if len(os.Args) < 3 {
-			die("Not enougn args")
+			die("Not enough args")
 		}
 
-		noteIndex, err := strconv.Atoi(os.Args[2])
-		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-			die("Wrong note index")
-		}
-
-		noteIndexToEdit := notes[noteIndex-1]
-		noteToEdit := path.Join(home, T_BASE_DIR, ns, noteIndexToEdit)
-
-		cmd := exec.Command(os.Getenv("EDITOR"), noteToEdit)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		err = cmd.Run()
+		err := editTaskByIndex(os.Args[2], tasks, path.Join(home, T_BASE_DIR, ns))
 		if err != nil {
-			die("Error run EDITOR: %s", err)
+			die("Error editing task: %s", err)
 		}
+
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "get":
 		if len(os.Args) < 3 {
-			die("Not enougn args")
+			die("Not enough args")
 		}
 
-		content, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, os.Args[2]))
+		err := showTaskContentByName(path.Join(home, T_BASE_DIR, ns), os.Args[2])
 		if err != nil {
 			die("Error reading task: %s", err)
 		}
-		fmt.Print(string(content))
+
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "ns", "namespaces":
-		dirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR))
+		err := showNamespaces(path.Join(home, T_BASE_DIR))
 		if err != nil {
 			die("Error reading namespace: %s", err)
 		}
 
-		for _, de := range dirEntries {
-			if de.Name()[0] == '.' {
-				continue
-			}
-			if de.IsDir() {
-				namespaceDirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR, de.Name()))
-				namespaceNotesCount := 0
-				if err == nil {
-					namespaceNotesCount = len(namespaceDirEntries)
-				}
-				fmt.Printf("%s (%d)\n", de.Name(), namespaceNotesCount)
-			}
-		}
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-h", "--help":
-		fmt.Print(HELP_MESSAGE)
+		showHelp()
 
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-v", "--version":
-		fmt.Print(version)
+		showVersion()
 
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	default:
-		noteIndex, err := strconv.Atoi(cmd)
-		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-			die("Wrong note index")
-		}
-
-		noteToRead := notes[noteIndex-1]
-		fmt.Printf("\033[1;34m# %s\033[0m\n\n", noteToRead)
-
-		noteContent, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, noteToRead))
+		err := showTaskContentByIndex(cmd, tasks, path.Join(home, T_BASE_DIR, ns))
 		if err != nil {
-			die("Error reading task: %s", err)
+			die("Error: %s", err)
 		}
-		fmt.Print(string(noteContent))
+
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 }
 
-func findFileAbsPathUpTree(startdir string, filename string) string {
+func showTasks(tasks []string, namespace string) {
+	fmt.Printf("\033[1;34m# %s\033[0m\n", path.Base(namespace))
+	for i, task := range tasks {
+		taskLines, _ := countFileLines(path.Join(namespace, task))
+		var formattedTaskLines string
+
+		if taskLines > 70 {
+			formattedTaskLines = "..."
+		} else if taskLines == 0 {
+			formattedTaskLines = "-"
+		} else {
+			formattedTaskLines = fmt.Sprint(taskLines + 1)
+		}
+
+		formattedTaskName := strings.ReplaceAll(task, PATH_SEPARATOR_REPLACER, "/")
+		fmt.Printf("[%d] %s (%s)\n", i+1, formattedTaskName, formattedTaskLines)
+	}
+}
+
+func addTask(namespace string, taskName []string) {
+	newTaskName := strings.Join(taskName, " ")
+	newTaskName = strings.ReplaceAll(newTaskName, "/", PATH_SEPARATOR_REPLACER)
+
+	err := os.WriteFile(path.Join(namespace, newTaskName), []byte{}, 0644)
+	if err != nil {
+		die("Error write task: %s", err)
+	}
+}
+
+func deleteTasksByIndexes(indexes []string, tasks []string, namespace string) error {
+	for _, inputedTaskIndex := range indexes {
+		taskIndex, err := strconv.Atoi(inputedTaskIndex)
+		if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+			return fmt.Errorf("Wrong task index: %s", inputedTaskIndex)
+		}
+
+		taskNameToDelete := tasks[taskIndex-1]
+		deleteErr := os.Remove(path.Join(namespace, taskNameToDelete))
+		if deleteErr != nil {
+			return fmt.Errorf("Error remove task: %s", deleteErr)
+		}
+	}
+
+	return nil
+}
+
+func editTaskByIndex(index string, tasks []string, namespace string) error {
+	taskIndex, err := strconv.Atoi(index)
+	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+		return fmt.Errorf("Wrong task index")
+	}
+
+	taskIndexToEdit := tasks[taskIndex-1]
+	taskToEdit := path.Join(namespace, taskIndexToEdit)
+
+	cmd := exec.Command(os.Getenv("EDITOR"), taskToEdit)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Error run EDITOR: %w", err)
+	}
+
+	return nil
+}
+
+func showTaskContentByName(namespace string, name string) error {
+	content, err := os.ReadFile(path.Join(namespace, name))
+	if err != nil {
+		return fmt.Errorf("Error reading task: %w", err)
+	}
+
+	fmt.Print(string(content))
+	return nil
+}
+
+func showNamespaces(tBaseDir string) error {
+	dirEntries, err := os.ReadDir(tBaseDir)
+	if err != nil {
+		return err
+	}
+
+	for _, de := range dirEntries {
+		if de.Name()[0] == '.' {
+			continue
+		}
+		if de.IsDir() {
+			namespaceDirEntries, err := os.ReadDir(path.Join(tBaseDir, de.Name()))
+			namespaceTasksCount := 0
+			if err == nil {
+				namespaceTasksCount = len(namespaceDirEntries)
+			}
+			fmt.Printf("%s (%d)\n", de.Name(), namespaceTasksCount)
+		}
+	}
+	return nil
+}
+
+func showHelp() {
+	fmt.Print(HELP_MESSAGE)
+}
+
+func showVersion() {
+	fmt.Print(version)
+}
+
+func showTaskContentByIndex(cmd string, tasks []string, namespace string) error {
+	taskIndex, err := strconv.Atoi(cmd)
+	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+		return fmt.Errorf("Wrong task index: %s", cmd)
+	}
+
+	taskNameToRead := tasks[taskIndex-1]
+	taskContent, err := os.ReadFile(path.Join(namespace, taskNameToRead))
+	if err != nil {
+		return fmt.Errorf("Error reading task: %w", err)
+	}
+
+	fmt.Printf("\033[1;34m# %s\033[0m\n\n", taskNameToRead)
+	fmt.Print(string(taskContent))
+	return nil
+}
+
+func findFileUpTree(startdir string, filename string) string {
 	if startdir == "/" {
 		return ""
 	}
 	if _, err := os.Stat(path.Join(startdir, filename)); err == nil {
 		return path.Join(startdir, filename)
 	}
-	return findFileAbsPathUpTree(filepath.Dir(startdir), filename)
+	return findFileUpTree(filepath.Dir(startdir), filename)
 }
 
-func getNotesInDirSorted(namespacePath string) ([]string, error) {
+func getTasksInNamespaceSorted(namespacePath string) ([]string, error) {
 	dirEntries, err := os.ReadDir(namespacePath)
 	if err != nil {
 		return nil, err
 	}
 
-	sortErr := sortNotes(dirEntries)
+	sortErr := sortTasks(dirEntries)
 	if sortErr != nil {
 		die("Error sorting tasks: %s", sortErr)
 	}
@@ -273,12 +338,12 @@ func getNotesInDirSorted(namespacePath string) ([]string, error) {
 	return result, nil
 }
 
-func sortNotes(dirEntries []os.DirEntry) error {
+func sortTasks(tasks []os.DirEntry) error {
 	var sortErr error
 
-	sort.Slice(dirEntries, func(i, j int) bool {
-		iInfo, err := dirEntries[i].Info()
-		jInfo, err := dirEntries[j].Info()
+	sort.Slice(tasks, func(i, j int) bool {
+		iInfo, err := tasks[i].Info()
+		jInfo, err := tasks[j].Info()
 
 		if err != nil {
 			sortErr = err
