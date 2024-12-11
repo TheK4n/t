@@ -333,7 +333,7 @@ func getTasksInNamespaceSorted(namespacePath string) ([]string, error) {
 
 	sortErr := sortTasks(dirEntries)
 	if sortErr != nil {
-		die("Error sorting tasks: %s", sortErr)
+		return nil, fmt.Errorf("Error sorting tasks: %s", sortErr)
 	}
 
 	result := make([]string, len(dirEntries))
