@@ -74,17 +74,17 @@ func main() {
 	if err != nil {
 		mkdirError := os.MkdirAll(namespacePath, 0755)
 		if mkdirError != nil {
-			panic("Cant create namespace")
+			die("Cant create namespace: %s", mkdirError)
 		}
 	} else {
 		if !fstat.IsDir() {
-			panic("Selected namespace not a directory")
+			die("Selected namespace not a directory")
 		}
 	}
 
 	notes, err := getNotesInDirSorted(namespacePath)
 	if err != nil {
-		panic(err)
+		die("Error get tasks: %s", err)
 	}
 
 	if len(os.Args) < 2 {
@@ -92,7 +92,7 @@ func main() {
 		for i, note := range notes {
 			noteLines, err := countFileLines(path.Join(home, T_BASE_DIR, ns, note))
 			if err != nil {
-				panic(err)
+				die("Error counting task lines: %s", err)
 			}
 
 			var formattedNoteLines string
@@ -116,7 +116,7 @@ func main() {
 	switch cmd {
 	case "a", "add":
 		if len(os.Args) < 3 {
-			panic("not enough args")
+			die("Not enough args")
 		}
 
 		newNoteName := strings.Join(os.Args[2:], " ")
@@ -124,26 +124,26 @@ func main() {
 
 		err := os.WriteFile(path.Join(home, T_BASE_DIR, ns, newNoteName), []byte{}, 0644)
 		if err != nil {
-			panic(err)
+			die("Error write task: %s", err)
 		}
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "d", "done", "delete":
 		if len(os.Args) < 3 {
-			panic("not enougn args")
+			die("Not enougn args")
 		}
 
 		for _, inputedNoteIndex := range os.Args[2:] {
 			noteIndex, err := strconv.Atoi(inputedNoteIndex)
 			if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-				panic("wrong note index")
+				die("Wrong note index")
 			}
 
 			noteToRemove := notes[noteIndex-1]
 			removeErr := os.Remove(path.Join(home, T_BASE_DIR, ns, noteToRemove))
 			if removeErr != nil {
-				panic(removeErr)
+				die("Error remove task: %s", removeErr)
 			}
 		}
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
@@ -151,12 +151,12 @@ func main() {
 
 	case "e", "edit":
 		if len(os.Args) < 3 {
-			panic("not enougn args")
+			die("Not enougn args")
 		}
 
 		noteIndex, err := strconv.Atoi(os.Args[2])
 		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-			panic("wrong note index")
+			die("Wrong note index")
 		}
 
 		noteIndexToEdit := notes[noteIndex-1]
@@ -169,19 +169,19 @@ func main() {
 
 		err = cmd.Run()
 		if err != nil {
-			panic(err)
+			die("Error run EDITOR: %s", err)
 		}
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "get":
 		if len(os.Args) < 3 {
-			panic("not enougn args")
+			die("Not enougn args")
 		}
 
 		content, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, os.Args[2]))
 		if err != nil {
-			panic(err)
+			die("Error reading task: %s", err)
 		}
 		fmt.Print(string(content))
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
@@ -190,7 +190,7 @@ func main() {
 	case "ns", "namespaces":
 		dirEntries, err := os.ReadDir(path.Join(home, T_BASE_DIR))
 		if err != nil {
-			panic(err)
+			die("Error reading namespace: %s", err)
 		}
 
 		for _, de := range dirEntries {
@@ -224,7 +224,7 @@ func main() {
 	default:
 		noteIndex, err := strconv.Atoi(cmd)
 		if err != nil || noteIndex > len(notes) || noteIndex < 1 {
-			panic("wrong note index")
+			die("Wrong note index")
 		}
 
 		noteToRead := notes[noteIndex-1]
@@ -232,7 +232,7 @@ func main() {
 
 		noteContent, err := os.ReadFile(path.Join(home, T_BASE_DIR, ns, noteToRead))
 		if err != nil {
-			panic(err)
+			die("Error reading task: %s", err)
 		}
 		fmt.Print(string(noteContent))
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
@@ -258,7 +258,7 @@ func getNotesInDirSorted(namespacePath string) ([]string, error) {
 
 	sortErr := sortNotes(dirEntries)
 	if sortErr != nil {
-		panic(sortErr)
+		die("Error sorting tasks: %s", sortErr)
 	}
 
 	result := make([]string, len(dirEntries))
@@ -313,10 +313,10 @@ func countFileLines(filePath string) (int, error) {
 	}
 }
 
-func removeEmptyNamespaces(dir string) error {
+func removeEmptyNamespaces(dir string) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		panic(err)
+		die("Error reading namespace to remove: %s", err)
 	}
 
 	for _, de := range dirEntries {
@@ -327,10 +327,13 @@ func removeEmptyNamespaces(dir string) error {
 		if len(subdirEntries) < 1 {
 			rmErr := os.Remove(path.Join(dir, de.Name()))
 			if rmErr != nil {
-				panic(rmErr)
+				die("Error remove namespace: %s", rmErr)
 			}
 		}
 	}
+}
 
-	return nil
+func die(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, format, a...)
+	os.Exit(1)
 }
