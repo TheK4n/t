@@ -201,11 +201,11 @@ func getNamespaceFromEnvOrFromFile() (string, error) {
 	return strings.Trim(string(envFileContent), " \n"), nil
 }
 
-func createDirectoryIfNotExists(namespacePath string) error {
-	fstat, err := os.Stat(namespacePath)
+func createDirectoryIfNotExists(directory string) error {
+	fstat, err := os.Stat(directory)
 
 	if err != nil {
-		mkdirError := os.MkdirAll(namespacePath, 0755)
+		mkdirError := os.MkdirAll(directory, 0755)
 		if mkdirError != nil {
 			return fmt.Errorf("Cant create directory: %s", mkdirError)
 		}
@@ -213,7 +213,7 @@ func createDirectoryIfNotExists(namespacePath string) error {
 	}
 
 	if !fstat.IsDir() {
-		return fmt.Errorf("Error: file %s already exists, and its not a directory", namespacePath)
+		return fmt.Errorf("Error: file %s already exists, and its not a directory", directory)
 	}
 
 	return nil

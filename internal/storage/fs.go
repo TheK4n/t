@@ -1,11 +1,12 @@
 package storage
 
-
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -18,6 +19,31 @@ type FSTasksStorage struct {
 	tBaseDir string
 }
 
+func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
+	dirEntries, err := os.ReadDir(ts.tBaseDir)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, 32)
+	for _, de := range dirEntries {
+		if de.Name()[0] == '.' {
+			continue
+		}
+		if de.IsDir() {
+			result = append(result, de.Name())
+		}
+	}
+	return result, nil
+}
+
+func (ts *FSTasksStorage) Count(namespace string) (uint, error) {
+	namespaceDirEntries, err := os.ReadDir(path.Join(ts.tBaseDir, namespace))
+	if err != nil {
+		return 0, err
+	}
+	return uint(len(namespaceDirEntries)), nil
+}
 
 func (ts *FSTasksStorage) GetSorted(namespace string) ([]string, error) {
 	namespacePath := path.Join(ts.tBaseDir, namespace)
@@ -141,4 +167,32 @@ func (ts *FSTasksStorage) EditByIndex(namespace string, index string, data []byt
 	taskIndexToEdit := tasks[taskIndex-1]
 	taskToEdit := path.Join(ts.tBaseDir, namespace, taskIndexToEdit)
 	return os.WriteFile(taskToEdit, data, 0644)
+}
+
+func (ts *FSTasksStorage) CountLines(namespace string, name string) (uint, error) {
+	return countFileLines(path.Join(ts.tBaseDir, namespace, name))
+}
+
+func countFileLines(filePath string) (uint, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	buf := make([]byte, 1024)
+	var count uint = 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := file.Read(buf)
+		count += uint(bytes.Count(buf[:c], lineSep))
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+
+		case err != nil:
+			return count, err
+		}
+	}
 }
