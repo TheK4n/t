@@ -11,26 +11,22 @@ import (
 	"strings"
 )
 
-
 const PATH_SEPARATOR_REPLACER = "%2F"
 
-
 type FSTasksStorage struct {
-	tBaseDir string
+	TBaseDir string
 }
 
 func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
-	dirEntries, err := os.ReadDir(ts.tBaseDir)
+	dirEntries, err := os.ReadDir(ts.TBaseDir)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]string, 32)
+	result := make([]string, len(dirEntries))
 	for _, de := range dirEntries {
-		if de.Name()[0] == '.' {
-			continue
-		}
-		if de.IsDir() {
+		isNotHiddenDir := de.IsDir() && de.Name()[0] != '.'
+		if isNotHiddenDir {
 			result = append(result, de.Name())
 		}
 	}
@@ -38,7 +34,7 @@ func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
 }
 
 func (ts *FSTasksStorage) Count(namespace string) (uint, error) {
-	namespaceDirEntries, err := os.ReadDir(path.Join(ts.tBaseDir, namespace))
+	namespaceDirEntries, err := os.ReadDir(path.Join(ts.TBaseDir, namespace))
 	if err != nil {
 		return 0, err
 	}
@@ -46,7 +42,7 @@ func (ts *FSTasksStorage) Count(namespace string) (uint, error) {
 }
 
 func (ts *FSTasksStorage) GetSorted(namespace string) ([]string, error) {
-	namespacePath := path.Join(ts.tBaseDir, namespace)
+	namespacePath := path.Join(ts.TBaseDir, namespace)
 	dirEntries, err := os.ReadDir(namespacePath)
 	if err != nil {
 		return nil, err
@@ -96,9 +92,8 @@ func (ts *FSTasksStorage) GetContentByIndex(namespace string, index string) ([]b
 		return nil, fmt.Errorf("Wrong task index: %s", index)
 	}
 
-
 	taskNameToRead := tasks[taskIndex-1]
-	taskContent, err := os.ReadFile(path.Join(ts.tBaseDir, namespace, taskNameToRead))
+	taskContent, err := os.ReadFile(path.Join(ts.TBaseDir, namespace, taskNameToRead))
 	if err != nil {
 		return nil, fmt.Errorf("Error reading task: %w", err)
 	}
@@ -107,7 +102,7 @@ func (ts *FSTasksStorage) GetContentByIndex(namespace string, index string) ([]b
 }
 
 func (ts *FSTasksStorage) GetContentByName(namespace string, name string) ([]byte, error) {
-	content, err := os.ReadFile(path.Join(ts.tBaseDir, namespace, name))
+	content, err := os.ReadFile(path.Join(ts.TBaseDir, namespace, name))
 	if err != nil {
 		return nil, fmt.Errorf("Error reading task: %w", err)
 	}
@@ -115,7 +110,7 @@ func (ts *FSTasksStorage) GetContentByName(namespace string, name string) ([]byt
 	return content, nil
 }
 
-func (ts *FSTasksStorage) DeleteTasksByIndexes(namespace string, indexes []string) error {
+func (ts *FSTasksStorage) DeleteByIndexes(namespace string, indexes []string) error {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return err
@@ -128,7 +123,7 @@ func (ts *FSTasksStorage) DeleteTasksByIndexes(namespace string, indexes []strin
 		}
 
 		taskNameToDelete := tasks[taskIndex-1]
-		deleteErr := os.Remove(path.Join(ts.tBaseDir, namespace, taskNameToDelete))
+		deleteErr := os.Remove(path.Join(ts.TBaseDir, namespace, taskNameToDelete))
 		if deleteErr != nil {
 			return fmt.Errorf("Error remove task: %s", deleteErr)
 		}
@@ -137,15 +132,10 @@ func (ts *FSTasksStorage) DeleteTasksByIndexes(namespace string, indexes []strin
 	return nil
 }
 
-func (ts *FSTasksStorage) EditByName(namespace string, name string, data []byte) error {
-	taskToEdit := path.Join(ts.tBaseDir, namespace, name)
-	return os.WriteFile(taskToEdit, data, 0644)
-}
-
 func (ts *FSTasksStorage) Add(namespace string, name string) error {
 	name = strings.ReplaceAll(name, "/", PATH_SEPARATOR_REPLACER)
 
-	err := os.WriteFile(path.Join(ts.tBaseDir, namespace, name), []byte{}, 0644)
+	err := os.WriteFile(path.Join(ts.TBaseDir, namespace, name), []byte{}, 0644)
 	if err != nil {
 		return fmt.Errorf("Error write task: %s", err)
 	}
@@ -153,7 +143,20 @@ func (ts *FSTasksStorage) Add(namespace string, name string) error {
 	return nil
 }
 
-func (ts *FSTasksStorage) EditByIndex(namespace string, index string, data []byte) error {
+func (ts *FSTasksStorage) WriteByName(namespace string, name string, r io.Reader) error {
+	taskToEdit := path.Join(ts.TBaseDir, namespace, name)
+
+	file, err := os.Create(taskToEdit)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, r)
+	return err
+}
+
+func (ts *FSTasksStorage) WriteByIndex(namespace string, index string, r io.Reader) error {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return err
@@ -164,13 +167,35 @@ func (ts *FSTasksStorage) EditByIndex(namespace string, index string, data []byt
 		return fmt.Errorf("Wrong task index")
 	}
 
-	taskIndexToEdit := tasks[taskIndex-1]
-	taskToEdit := path.Join(ts.tBaseDir, namespace, taskIndexToEdit)
-	return os.WriteFile(taskToEdit, data, 0644)
+	taskNameToEdit := tasks[taskIndex-1]
+	taskToEdit := path.Join(ts.TBaseDir, namespace, taskNameToEdit)
+
+	fileTask, err := os.Create(taskToEdit)
+	if err != nil {
+		return err
+	}
+	defer fileTask.Close()
+
+	_, err = io.Copy(fileTask, r)
+	return err
+}
+
+func (ts *FSTasksStorage) GetNameByIndex(namespace string, index string) (string, error) {
+	tasks, err := ts.GetSorted(namespace)
+	if err != nil {
+		return "", err
+	}
+
+	taskIndex, err := strconv.Atoi(index)
+	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+		return "", fmt.Errorf("Wrong task index")
+	}
+
+	return tasks[taskIndex-1], nil
 }
 
 func (ts *FSTasksStorage) CountLines(namespace string, name string) (uint, error) {
-	return countFileLines(path.Join(ts.tBaseDir, namespace, name))
+	return countFileLines(path.Join(ts.TBaseDir, namespace, name))
 }
 
 func countFileLines(filePath string) (uint, error) {
