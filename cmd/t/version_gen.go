@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 		log.Fatalf("Failed to read version file: %s", readErr)
 	}
 
-	version := string(versionFileContent)
+	version := strings.Trim(string(versionFileContent), " \n")
 	content := fmt.Sprintf(`package main
 
 var (
