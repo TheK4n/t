@@ -269,11 +269,11 @@ func editTaskByIndex(namespace string, index string, s storage.TasksStorage) err
 		return err
 	}
 
-	_, err = tempFile.Write(content)
+	_, err = tempFile.Write(content) // write original text from task
 	if err != nil {
 		return err
 	}
-	tempFile.Close()
+	tempFile.Close() // close now, because of editor
 
 	cmd := exec.Command(os.Getenv("EDITOR"), tempFile.Name())
 	cmd.Stdin = os.Stdin
@@ -285,7 +285,7 @@ func editTaskByIndex(namespace string, index string, s storage.TasksStorage) err
 		return fmt.Errorf("Error run EDITOR: %w", err)
 	}
 
-	tempFile, err = os.Open(tempFile.Name())
+	tempFile, err = os.Open(tempFile.Name()) // reopen tempfile for reading
 	if err != nil {
 		return err
 	}
