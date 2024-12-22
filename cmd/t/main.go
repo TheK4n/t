@@ -154,6 +154,12 @@ func main() {
 		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
+	case "all":
+		ShowAllTasksFromAllNamespaces(s)
+
+		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		os.Exit(0)
+
 	case "-h", "--help":
 		showHelp()
 
@@ -352,6 +358,24 @@ func findFileUpTree(startdir string, filename string) string {
 		return path.Join(startdir, filename)
 	}
 	return findFileUpTree(filepath.Dir(startdir), filename)
+}
+
+func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
+	namespaces, err := s.GetNamespaces()
+	if err != nil {
+		return err
+	}
+
+	for _, namespace := range namespaces {
+		currentNamespaceTasks, err := s.GetSorted(namespace)
+		if err != nil {
+			return err
+		}
+		for _, task := range currentNamespaceTasks {
+			fmt.Printf("[%s] %s\n", namespace, task)
+		}
+	}
+	return nil
 }
 
 func removeEmptyNamespaces(dir string) {

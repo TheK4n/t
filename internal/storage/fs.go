@@ -23,7 +23,7 @@ func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
 		return nil, err
 	}
 
-	result := make([]string, len(dirEntries))
+	result := make([]string, 0, len(dirEntries))
 	for _, de := range dirEntries {
 		isNotHiddenDir := de.IsDir() && de.Name()[0] != '.'
 		if isNotHiddenDir {
