@@ -13,7 +13,6 @@ import (
 	storage "github.com/thek4n/t/internal/storage"
 )
 
-const T_BASE_DIR = ".t"
 const DEFAULT_NAMESPACE = "def"
 const PATH_SEPARATOR_REPLACER = "%2F"
 const ENVFILE = ".tns"
@@ -59,24 +58,12 @@ NAMESPACE FILE
 `
 
 func main() {
-	home := os.Getenv("HOME")
-	if home == "" {
-		die("HOME environment variable is invalid")
-	}
-
 	namespace, err := getNamespaceFromEnvOrFromFile()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: %s, using default namespace (%s)\n", err, DEFAULT_NAMESPACE)
 	}
 
-	namespacePath := path.Join(home, T_BASE_DIR, namespace)
-
-	createNamespaceErr := createDirectoryIfNotExists(namespacePath)
-	if createNamespaceErr != nil {
-		die("Error creating namespace: %s", createNamespaceErr)
-	}
-
-	s := getTaskStorage()
+	s := initTaskStorage(namespace)
 
 	if len(os.Args) < 2 {
 		err := showTasks(namespace, s)
@@ -193,24 +180,6 @@ func getNamespaceFromEnvOrFromFile() (string, error) {
 	}
 
 	return strings.Trim(string(envFileContent), " \n"), nil
-}
-
-func createDirectoryIfNotExists(directory string) error {
-	fstat, err := os.Stat(directory)
-
-	if err != nil {
-		mkdirError := os.MkdirAll(directory, 0755)
-		if mkdirError != nil {
-			return fmt.Errorf("Cant create directory: %s", mkdirError)
-		}
-		return nil
-	}
-
-	if !fstat.IsDir() {
-		return fmt.Errorf("Error: file %s already exists, and its not a directory", directory)
-	}
-
-	return nil
 }
 
 func showTasks(namespace string, s storage.TasksStorage) error {
