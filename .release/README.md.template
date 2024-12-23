@@ -55,9 +55,10 @@ t 1    # Show task content with index 1
 ```
 
 
-
-### Compile with sqlite support
+### Install with sqlite support
+Sqlite3 db as storage instead of files
 
 ```sh
-go build --tags tsqlite ./cmd/t
+go install --tags=tsqlite github.com/thek4n/t/cmd/t@%VERSION%
+t -v  # %VERSION%-sqlite
 ```
