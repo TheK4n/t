@@ -10,17 +10,17 @@ import (
 )
 
 type SqlTasksStorage struct {
-	dbPath string
+	DbPath string
 }
 
 func (ts *SqlTasksStorage) GetNamespaces() ([]string, error) {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select name from namespaces;")
+	rows, err := db.Query("select distinct namespace from tasks;")
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (ts *SqlTasksStorage) GetNamespaces() ([]string, error) {
 }
 
 func (ts *SqlTasksStorage) Count(namespace string) (uint, error) {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return 0, err
 	}
@@ -60,13 +60,13 @@ func (ts *SqlTasksStorage) Count(namespace string) (uint, error) {
 }
 
 func (ts *SqlTasksStorage) GetSorted(namespace string) ([]string, error) {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select COUNT(1) from tasks where namespace = '$1' sorted by born;", namespace)
+	rows, err := db.Query("select name from tasks where namespace = $1 order by born desc;", namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +88,13 @@ func (ts *SqlTasksStorage) GetSorted(namespace string) ([]string, error) {
 }
 
 func (ts *SqlTasksStorage) Add(namespace string, name string) error {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	_, err = db.Exec("insert into tasks(name, namespace) values('$1', '$2');", name, namespace)
+	_, err = db.Exec("insert into tasks(name, namespace, content) values($1, $2, '');", name, namespace)
 
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (ts *SqlTasksStorage) GetNameByIndex(namespace string, index string) (strin
 }
 
 func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]byte, error) {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,6 @@ func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]by
 	return []byte(taskContent), nil
 }
 
-
 func (ts *SqlTasksStorage) GetContentByIndex(namespace string, index string) ([]byte, error) {
 	taskNameToRead, err := ts.GetNameByIndex(namespace, index)
 	if err != nil {
@@ -149,23 +148,20 @@ func (ts *SqlTasksStorage) GetContentByIndex(namespace string, index string) ([]
 	return content, nil
 }
 
-
-
 func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reader) error {
-	db, err := sql.Open("sqlite3", ts.dbPath)
+	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 
-	content := make([]byte, 0, 1024)
-	_, err = r.Read(content)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec("update tasks set content = '$1' where name = $2;", string(content), name)
+	_, err = db.Exec("update tasks set content = $1, born = CURRENT_TIMESTAMP where name = $2 and namespace = $3;", string(b), name, namespace)
 	if err != nil {
 		return err
 	}
@@ -175,25 +171,11 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 
 func (ts *SqlTasksStorage) WriteByIndex(namespace string, index string, r io.Reader) error {
 	taskNameToWrite, err := ts.GetNameByIndex(namespace, index)
-
-	db, err := sql.Open("sqlite3", ts.dbPath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	content := make([]byte, 0, 1024)
-	_, err = r.Read(content)
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec("update tasks set content = '$1' where name = $2;", string(content), taskNameToWrite)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ts.WriteByName(namespace, taskNameToWrite, r)
 }
 
 func (ts *SqlTasksStorage) CountLines(namespace string, name string) (uint, error) {
@@ -214,3 +196,30 @@ func countRune(s string, r rune) uint {
     }
     return count
 }
+
+func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []string) error {
+	db, err := sql.Open("sqlite3", ts.DbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	names := []string{}
+	for _, index := range indexes {
+		name, err := ts.GetNameByIndex(namespace, index)
+		if err != nil {
+			return err
+		}
+		names = append(names, name)
+	}
+
+	for _, name := range names {
+		_, err = db.Exec("delete from tasks where name = $1 and namespace = $2", name, namespace)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+

@@ -76,13 +76,10 @@ func main() {
 		die("Error creating namespace: %s", createNamespaceErr)
 	}
 
-	tBasePath := path.Join(home, T_BASE_DIR)
-
-	s := &storage.FSTasksStorage{TBaseDir: tBasePath}
+	s := &storage.SqlTasksStorage{DbPath: "./test.sqlite3"}
 
 	if len(os.Args) < 2 {
 		showTasks(namespace, s)
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 
@@ -90,7 +87,6 @@ func main() {
 	switch cmd {
 	case "show":
 		showTasks(namespace, s)
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "a", "add":
@@ -103,7 +99,6 @@ func main() {
 			die("Error adding task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "d", "done", "delete":
@@ -116,7 +111,6 @@ func main() {
 			die("Error deleting task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "e", "edit":
@@ -129,7 +123,6 @@ func main() {
 			die("Error editing task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "get":
@@ -142,7 +135,6 @@ func main() {
 			die("Error reading task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "ns", "namespaces":
@@ -151,25 +143,21 @@ func main() {
 			die("Error reading namespace: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "all":
 		ShowAllTasksFromAllNamespaces(s)
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-h", "--help":
 		showHelp()
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-v", "--version":
 		showVersion()
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	default:
@@ -178,7 +166,6 @@ func main() {
 			die("Error: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 }
@@ -376,26 +363,6 @@ func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
 		}
 	}
 	return nil
-}
-
-func removeEmptyNamespaces(dir string) {
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		die("Error reading namespace to remove: %s", err)
-	}
-
-	for _, de := range dirEntries {
-		subdirEntries, err := os.ReadDir(path.Join(dir, de.Name()))
-		if err != nil {
-			continue
-		}
-		if len(subdirEntries) < 1 {
-			rmErr := os.Remove(path.Join(dir, de.Name()))
-			if rmErr != nil {
-				die("Error remove namespace: %s", rmErr)
-			}
-		}
-	}
 }
 
 func die(format string, a ...any) {
