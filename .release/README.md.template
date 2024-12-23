@@ -53,3 +53,11 @@ t      # Show tasks
 t e 1  # Edit task content
 t 1    # Show task content with index 1
 ```
+
+
+
+### Compile with sqlite support
+
+```sh
+go build --tags tsqlite ./cmd/t
+```

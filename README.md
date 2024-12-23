@@ -35,13 +35,13 @@ go build ./cmd/t
 
 ### Install by golang (recommended):
 ```sh
-go install github.com/thek4n/t/cmd/t@v1.0.0
+go install github.com/thek4n/t/cmd/t@v1.1.0
 ```
 
 ### Download binary
 ```sh
-wget https://github.com/TheK4n/t/releases/download/v1.0.0/t_v1.0.0_linux_amd64.tar.gz
-tar xzf t_v1.0.0_linux_amd64.tar.gz
+wget https://github.com/TheK4n/t/releases/download/v1.1.0/t_v1.1.0_linux_amd64.tar.gz
+tar xzf t_v1.1.0_linux_amd64.tar.gz
 ```
 
 
@@ -52,4 +52,12 @@ t a Buy bread  # Add task
 t      # Show tasks
 t e 1  # Edit task content
 t 1    # Show task content with index 1
+```
+
+
+
+### Compile with sqlite support
+
+```sh
+go build --tags tsqlite ./cmd/t
 ```
