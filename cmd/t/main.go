@@ -76,10 +76,14 @@ func main() {
 		die("Error creating namespace: %s", createNamespaceErr)
 	}
 
-	s := &storage.SqlTasksStorage{DbPath: "./test.sqlite3"}
+	s := getTaskStorage()
 
 	if len(os.Args) < 2 {
-		showTasks(namespace, s)
+		err := showTasks(namespace, s)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 
