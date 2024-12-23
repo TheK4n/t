@@ -3,15 +3,22 @@
 package main
 
 import (
+	"os"
+	"path"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	storage "github.com/thek4n/t/internal/storage"
 )
 
-const DB_PATH = "./test.sqlite3"
-
 func initTaskStorage(namespace string) storage.TasksStorage {
-	db, err := sql.Open("sqlite3", DB_PATH)
+	home := os.Getenv("HOME")
+	if home == "" {
+		die("HOME environment variable is invalid")
+	}
+
+	dbPath := path.Join(home, ".t", "t.sqlite3")
+
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		die("%s", err.Error())
 	}
@@ -26,5 +33,5 @@ func initTaskStorage(namespace string) storage.TasksStorage {
 		content text not null);
 	`)
 
-	return &storage.SqlTasksStorage{DbPath: DB_PATH}
+	return &storage.SqlTasksStorage{DbPath: dbPath}
 }
