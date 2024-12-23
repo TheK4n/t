@@ -3,11 +3,11 @@
 package main
 
 import (
-	"os"
-	"path"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	storage "github.com/thek4n/t/internal/storage"
+	"os"
+	"path"
 )
 
 func initTaskStorage(namespace string) storage.TasksStorage {
