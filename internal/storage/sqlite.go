@@ -1,12 +1,11 @@
-
 package storage
 
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
-	"io"
 	_ "github.com/mattn/go-sqlite3"
+	"io"
+	"strconv"
 )
 
 type SqlTasksStorage struct {
@@ -155,7 +154,6 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 	}
 	defer db.Close()
 
-
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return err
@@ -188,13 +186,13 @@ func (ts *SqlTasksStorage) CountLines(namespace string, name string) (uint, erro
 }
 
 func countRune(s string, r rune) uint {
-    var count uint = 0
-    for _, c := range s {
-        if c == r {
-            count++
-        }
-    }
-    return count
+	var count uint = 0
+	for _, c := range s {
+		if c == r {
+			count++
+		}
+	}
+	return count
 }
 
 func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []string) error {
@@ -222,4 +220,3 @@ func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []string) e
 
 	return nil
 }
-
