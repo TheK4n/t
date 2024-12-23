@@ -33,5 +33,9 @@ func initTaskStorage(namespace string) storage.TasksStorage {
 		content text not null);
 	`)
 
+	if err != nil {
+		die("%s", err.Error())
+	}
+
 	return &storage.SqlTasksStorage{DbPath: dbPath}
 }
