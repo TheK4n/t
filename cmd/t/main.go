@@ -230,7 +230,7 @@ func editTaskByIndex(namespace string, index string, s storage.TasksStorage) err
 		return err
 	}
 
-	tempFile, err := os.CreateTemp("/tmp", fmt.Sprintf("t_%s_", taskName))
+	tempFile, err := createTempFile(fmt.Sprintf("t_%s_", taskName))
 	if err != nil {
 		return err
 	}
@@ -259,6 +259,32 @@ func editTaskByIndex(namespace string, index string, s storage.TasksStorage) err
 	defer tempFile.Close()
 
 	return s.WriteByIndex(namespace, index, tempFile)
+}
+
+func createTempFile(pattern string) (*os.File, error) {
+	tempDir := "/tmp"
+	if !exists(tempDir) {
+		tempDir = os.Getenv("TMPDIR")
+	}
+
+	if tempDir == "" {
+		tempDir = "."
+	}
+
+	tempFile, err := os.CreateTemp(tempDir, pattern)
+	if err != nil {
+		return nil, err
+	}
+	return tempFile, nil
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func showTaskContentByName(namespace string, name string, s storage.TasksStorage) error {
