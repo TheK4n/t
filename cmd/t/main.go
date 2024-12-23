@@ -3,16 +3,14 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
+
+	storage "github.com/thek4n/t/internal/storage"
 )
 
 const T_BASE_DIR = ".t"
@@ -78,22 +76,21 @@ func main() {
 		die("Error creating namespace: %s", createNamespaceErr)
 	}
 
-	tasks, err := getTasksInNamespaceSorted(namespacePath)
-	if err != nil {
-		die("Error get tasks: %s", err)
-	}
+	s := getTaskStorage()
 
 	if len(os.Args) < 2 {
-		showTasks(tasks, path.Join(home, T_BASE_DIR, namespace))
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		err := showTasks(namespace, s)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 
 	cmd := os.Args[1]
 	switch cmd {
 	case "show":
-		showTasks(tasks, path.Join(home, T_BASE_DIR, namespace))
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		showTasks(namespace, s)
 		os.Exit(0)
 
 	case "a", "add":
@@ -101,12 +98,11 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := addTask(path.Join(home, T_BASE_DIR, namespace), os.Args[2:])
+		err := addTask(namespace, strings.Join(os.Args[2:], " "), s)
 		if err != nil {
 			die("Error adding task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "d", "done", "delete":
@@ -114,12 +110,11 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := deleteTasksByIndexes(os.Args[2:], tasks, path.Join(home, T_BASE_DIR, namespace))
+		err := deleteTasksByIndexes(namespace, os.Args[2:], s)
 		if err != nil {
 			die("Error deleting task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "e", "edit":
@@ -127,12 +122,11 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := editTaskByIndex(os.Args[2], tasks, path.Join(home, T_BASE_DIR, namespace))
+		err := editTaskByIndex(namespace, os.Args[2], s)
 		if err != nil {
 			die("Error editing task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "get":
@@ -140,42 +134,42 @@ func main() {
 			die("Not enough args")
 		}
 
-		err := showTaskContentByName(path.Join(home, T_BASE_DIR, namespace), os.Args[2])
+		err := showTaskContentByName(namespace, os.Args[2], s)
 		if err != nil {
 			die("Error reading task: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "ns", "namespaces":
-		err := showNamespaces(path.Join(home, T_BASE_DIR))
+		err := showNamespaces(s)
 		if err != nil {
 			die("Error reading namespace: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
+		os.Exit(0)
+
+	case "all":
+		ShowAllTasksFromAllNamespaces(s)
+
 		os.Exit(0)
 
 	case "-h", "--help":
 		showHelp()
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	case "-v", "--version":
 		showVersion()
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 
 	default:
-		err := showTaskContentByIndex(cmd, tasks, path.Join(home, T_BASE_DIR, namespace))
+		err := showTaskContentByIndex(namespace, cmd, s)
 		if err != nil {
 			die("Error: %s", err)
 		}
 
-		removeEmptyNamespaces(path.Join(home, T_BASE_DIR))
 		os.Exit(0)
 	}
 }
@@ -201,11 +195,11 @@ func getNamespaceFromEnvOrFromFile() (string, error) {
 	return strings.Trim(string(envFileContent), " \n"), nil
 }
 
-func createDirectoryIfNotExists(namespacePath string) error {
-	fstat, err := os.Stat(namespacePath)
+func createDirectoryIfNotExists(directory string) error {
+	fstat, err := os.Stat(directory)
 
 	if err != nil {
-		mkdirError := os.MkdirAll(namespacePath, 0755)
+		mkdirError := os.MkdirAll(directory, 0755)
 		if mkdirError != nil {
 			return fmt.Errorf("Cant create directory: %s", mkdirError)
 		}
@@ -213,25 +207,32 @@ func createDirectoryIfNotExists(namespacePath string) error {
 	}
 
 	if !fstat.IsDir() {
-		return fmt.Errorf("Error: file %s already exists, and its not a directory", namespacePath)
+		return fmt.Errorf("Error: file %s already exists, and its not a directory", directory)
 	}
 
 	return nil
 }
 
-func showTasks(tasks []string, namespace string) {
-	fmt.Printf("\033[1;34m# %s\033[0m\n", path.Base(namespace))
+func showTasks(namespace string, s storage.TasksStorage) error {
+	tasks, err := s.GetSorted(namespace)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\033[1;34m# %s\033[0m\n", namespace)
 	for i, task := range tasks {
-		taskLines, _ := countFileLines(path.Join(namespace, task))
+		taskLines, _ := s.CountLines(namespace, task)
 
 		formattedTaskLines := formatLinesCount(taskLines)
 
 		formattedTaskName := strings.ReplaceAll(task, PATH_SEPARATOR_REPLACER, "/")
 		fmt.Printf("[%d] %s (%s)\n", i+1, formattedTaskName, formattedTaskLines)
 	}
+
+	return nil
 }
 
-func formatLinesCount(lines int) string {
+func formatLinesCount(lines uint) string {
 	if lines > 70 {
 		return "..."
 	}
@@ -241,45 +242,37 @@ func formatLinesCount(lines int) string {
 	return fmt.Sprint(lines + 1)
 }
 
-func addTask(namespace string, taskName []string) error {
-	newTaskName := strings.Join(taskName, " ")
-	newTaskName = strings.ReplaceAll(newTaskName, "/", PATH_SEPARATOR_REPLACER)
+func addTask(namespace string, name string, s storage.TasksStorage) error {
+	return s.Add(namespace, name)
+}
 
-	err := os.WriteFile(path.Join(namespace, newTaskName), []byte{}, 0644)
+func deleteTasksByIndexes(namespace string, indexes []string, s storage.TasksStorage) error {
+	return s.DeleteByIndexes(namespace, indexes)
+}
+
+func editTaskByIndex(namespace string, index string, s storage.TasksStorage) error {
+	content, err := s.GetContentByIndex(namespace, index)
 	if err != nil {
-		return fmt.Errorf("Error write task: %s", err)
+		return err
 	}
 
-	return nil
-}
-
-func deleteTasksByIndexes(indexes []string, tasks []string, namespace string) error {
-	for _, inputedTaskIndex := range indexes {
-		taskIndex, err := strconv.Atoi(inputedTaskIndex)
-		if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-			return fmt.Errorf("Wrong task index: %s", inputedTaskIndex)
-		}
-
-		taskNameToDelete := tasks[taskIndex-1]
-		deleteErr := os.Remove(path.Join(namespace, taskNameToDelete))
-		if deleteErr != nil {
-			return fmt.Errorf("Error remove task: %s", deleteErr)
-		}
+	taskName, err := s.GetNameByIndex(namespace, index)
+	if err != nil {
+		return err
 	}
 
-	return nil
-}
-
-func editTaskByIndex(index string, tasks []string, namespace string) error {
-	taskIndex, err := strconv.Atoi(index)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-		return fmt.Errorf("Wrong task index")
+	tempFile, err := os.CreateTemp("/tmp", fmt.Sprintf("t_%s_", taskName))
+	if err != nil {
+		return err
 	}
 
-	taskIndexToEdit := tasks[taskIndex-1]
-	taskToEdit := path.Join(namespace, taskIndexToEdit)
+	_, err = tempFile.Write(content) // write original text from task
+	if err != nil {
+		return err
+	}
+	tempFile.Close() // close now, because of editor
 
-	cmd := exec.Command(os.Getenv("EDITOR"), taskToEdit)
+	cmd := exec.Command(os.Getenv("EDITOR"), tempFile.Name())
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -289,37 +282,40 @@ func editTaskByIndex(index string, tasks []string, namespace string) error {
 		return fmt.Errorf("Error run EDITOR: %w", err)
 	}
 
-	return nil
+	tempFile, err = os.Open(tempFile.Name()) // reopen tempfile for reading
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+
+	return s.WriteByIndex(namespace, index, tempFile)
 }
 
-func showTaskContentByName(namespace string, name string) error {
-	content, err := os.ReadFile(path.Join(namespace, name))
+func showTaskContentByName(namespace string, name string, s storage.TasksStorage) error {
+	content, err := s.GetContentByName(namespace, name)
 	if err != nil {
-		return fmt.Errorf("Error reading task: %w", err)
+		return err
 	}
 
 	fmt.Print(string(content))
 	return nil
 }
 
-func showNamespaces(tBaseDir string) error {
-	dirEntries, err := os.ReadDir(tBaseDir)
+func showNamespaces(s storage.TasksStorage) error {
+	nss, err := s.GetNamespaces()
+
 	if err != nil {
 		return err
 	}
 
-	for _, de := range dirEntries {
-		if de.Name()[0] == '.' {
+	for _, ns := range nss {
+		namespaceTasksCount, err := s.Count(ns)
+		if err != nil {
+			fmt.Printf("%s (%s)\n", ns, "-")
 			continue
 		}
-		if de.IsDir() {
-			namespaceDirEntries, err := os.ReadDir(path.Join(tBaseDir, de.Name()))
-			namespaceTasksCount := 0
-			if err == nil {
-				namespaceTasksCount = len(namespaceDirEntries)
-			}
-			fmt.Printf("%s (%d)\n", de.Name(), namespaceTasksCount)
-		}
+		fmt.Printf("%s (%d)\n", ns, namespaceTasksCount)
 	}
 	return nil
 }
@@ -332,19 +328,15 @@ func showVersion() {
 	fmt.Print(version)
 }
 
-func showTaskContentByIndex(cmd string, tasks []string, namespace string) error {
-	taskIndex, err := strconv.Atoi(cmd)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-		return fmt.Errorf("Wrong task index: %s", cmd)
-	}
+func showTaskContentByIndex(namespace string, index string, s storage.TasksStorage) error {
+	taskContent, err := s.GetContentByIndex(namespace, index)
+	taskName, err := s.GetNameByIndex(namespace, index)
 
-	taskNameToRead := tasks[taskIndex-1]
-	taskContent, err := os.ReadFile(path.Join(namespace, taskNameToRead))
 	if err != nil {
-		return fmt.Errorf("Error reading task: %w", err)
+		return err
 	}
 
-	fmt.Printf("\033[1;34m# %s\033[0m\n\n", taskNameToRead)
+	fmt.Printf("\033[1;34m# %s\033[0m\n\n", taskName)
 	fmt.Print(string(taskContent))
 	return nil
 }
@@ -359,87 +351,22 @@ func findFileUpTree(startdir string, filename string) string {
 	return findFileUpTree(filepath.Dir(startdir), filename)
 }
 
-func getTasksInNamespaceSorted(namespacePath string) ([]string, error) {
-	dirEntries, err := os.ReadDir(namespacePath)
+func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
+	namespaces, err := s.GetNamespaces()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sortErr := sortTasks(dirEntries)
-	if sortErr != nil {
-		return nil, fmt.Errorf("Error sorting tasks: %s", sortErr)
-	}
-
-	result := make([]string, len(dirEntries))
-	for i, de := range dirEntries {
-		if de.IsDir() {
-			continue
-		}
-
-		result[i] = de.Name()
-	}
-
-	return result, nil
-}
-
-func sortTasks(tasks []os.DirEntry) error {
-	var sortErr error
-
-	sort.Slice(tasks, func(i, j int) bool {
-		iInfo, err := tasks[i].Info()
-		jInfo, err := tasks[j].Info()
-
+	for _, namespace := range namespaces {
+		currentNamespaceTasks, err := s.GetSorted(namespace)
 		if err != nil {
-			sortErr = err
+			return err
 		}
-
-		return iInfo.ModTime().Unix() > jInfo.ModTime().Unix()
-	})
-	return sortErr
-}
-
-func countFileLines(filePath string) (int, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return 0, err
-	}
-
-	buf := make([]byte, 1024)
-	count := 0
-	lineSep := []byte{'\n'}
-
-	for {
-		c, err := file.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return count, nil
-
-		case err != nil:
-			return count, err
+		for _, task := range currentNamespaceTasks {
+			fmt.Printf("[%s] %s\n", namespace, task)
 		}
 	}
-}
-
-func removeEmptyNamespaces(dir string) {
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		die("Error reading namespace to remove: %s", err)
-	}
-
-	for _, de := range dirEntries {
-		subdirEntries, err := os.ReadDir(path.Join(dir, de.Name()))
-		if err != nil {
-			continue
-		}
-		if len(subdirEntries) < 1 {
-			rmErr := os.Remove(path.Join(dir, de.Name()))
-			if rmErr != nil {
-				die("Error remove namespace: %s", rmErr)
-			}
-		}
-	}
+	return nil
 }
 
 func die(format string, a ...any) {
