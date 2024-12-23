@@ -1,3 +1,5 @@
+//go:build !tsqlite
+
 package main
 
 var (
