@@ -37,7 +37,6 @@ build_and_pack_sqlite() {
     pack_sqlite "${arch}"
 }
 
-build_and_pack_sqlite "arm64"
 build_and_pack_sqlite "amd64"
 
 build_and_pack "arm64"
