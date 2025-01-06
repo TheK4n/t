@@ -27,10 +27,14 @@ func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
 
 	result := make([]string, 0, len(dirEntries))
 	for _, de := range dirEntries {
-		isNotHiddenDir := de.IsDir() && de.Name()[0] != '.'
-		if isNotHiddenDir {
-			result = append(result, de.Name())
+		if !de.IsDir() {
+			continue
 		}
+		if de.Name()[0] == '.' {
+			continue
+		}
+
+		result = append(result, de.Name())
 	}
 	return result, nil
 }

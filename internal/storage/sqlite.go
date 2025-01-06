@@ -67,7 +67,7 @@ func (ts *SqlTasksStorage) GetSorted(namespace string) ([]string, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select name from tasks where namespace = $1 order by born desc;", namespace)
+	rows, err := db.Query("select name from tasks where namespace = $1 order by updated desc;", namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 		return err
 	}
 
-	_, err = db.Exec("update tasks set content = $1, born = CURRENT_TIMESTAMP where name = $2 and namespace = $3;", string(b), name, namespace)
+	_, err = db.Exec("update tasks set content = $1, updated = CURRENT_TIMESTAMP where name = $2 and namespace = $3;", string(b), name, namespace)
 	if err != nil {
 		return err
 	}

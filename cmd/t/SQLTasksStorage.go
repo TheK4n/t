@@ -29,7 +29,7 @@ func initTaskStorage(namespace string) storage.TasksStorage {
 	tasks(
 		name varchar(90) primary key,
 		namespace varchar(30) not null,
-		born timestamp default CURRENT_TIMESTAMP not null,
+		updated timestamp default CURRENT_TIMESTAMP not null,
 		content text not null);
 	`)
 
