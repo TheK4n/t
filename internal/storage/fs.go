@@ -163,27 +163,12 @@ func (ts *FSTasksStorage) WriteByName(namespace string, name string, r io.Reader
 }
 
 func (ts *FSTasksStorage) WriteByIndex(namespace string, index string, r io.Reader) error {
-	tasks, err := ts.GetSorted(namespace)
+	taskNameToEdit, err := ts.GetNameByIndex(namespace, index)
 	if err != nil {
 		return err
 	}
 
-	taskIndex, err := strconv.Atoi(index)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-		return fmt.Errorf("Wrong task index")
-	}
-
-	taskNameToEdit := tasks[taskIndex-1]
-	taskToEdit := path.Join(ts.TBaseDir, namespace, taskNameToEdit)
-
-	fileTask, err := os.Create(taskToEdit)
-	if err != nil {
-		return err
-	}
-	defer fileTask.Close()
-
-	_, err = io.Copy(fileTask, r)
-	return err
+	return ts.WriteByName(namespace, taskNameToEdit, r)
 }
 
 func (ts *FSTasksStorage) GetNameByIndex(namespace string, index string) (string, error) {
