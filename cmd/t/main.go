@@ -258,7 +258,7 @@ func editTaskByIndex(namespace string, index string, s storage.TasksStorage) err
 	defer os.Remove(tempFile.Name())
 	defer tempFile.Close()
 
-	return s.WriteByIndex(namespace, index, tempFile)
+	return s.WriteByName(namespace, taskName, tempFile)
 }
 
 func createTempFile(pattern string) (*os.File, error) {
