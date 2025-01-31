@@ -8,15 +8,18 @@ import (
 	storage "github.com/thek4n/t/internal/storage"
 	"os"
 	"path"
+	"fmt"
 )
 
-func initTaskStorage(namespace string) storage.TasksStorage {
-	home := os.Getenv("HOME")
-	if home == "" {
-		die("HOME environment variable is invalid")
+const T_BASE_DIR = ".t"
+
+func initTaskStorage() storage.TasksStorage {
+	tBasePath, err := getBaseDir()
+	if err != nil {
+		die("%s", err.Error())
 	}
 
-	dbPath := path.Join(home, ".t", "t.sqlite3")
+	dbPath := path.Join(tBasePath, "t.sqlite3")
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -38,4 +41,21 @@ func initTaskStorage(namespace string) storage.TasksStorage {
 	}
 
 	return &storage.SqlTasksStorage{DbPath: dbPath}
+}
+
+func createNamespace(_ string) error {
+	return nil
+}
+
+func cleanupEmptyNamespaces(_ storage.TasksStorage) error {
+	return nil
+}
+
+func getBaseDir() (string, error) {
+	home := os.Getenv("HOME")
+	if home == "" {
+		return "", fmt.Errorf("HOME environment variable is invalid")
+	}
+
+	return path.Join(home, T_BASE_DIR), nil
 }

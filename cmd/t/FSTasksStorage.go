@@ -12,22 +12,24 @@ import (
 
 const T_BASE_DIR = ".t"
 
-func initTaskStorage(namespace string) storage.TasksStorage {
-	home := os.Getenv("HOME")
-	if home == "" {
-		die("HOME environment variable is invalid")
+func initTaskStorage() storage.TasksStorage {
+	tBasePath, err := getBaseDir()
+	if err != nil {
+		die("%s", err.Error())
 	}
-
-	namespacePath := path.Join(home, T_BASE_DIR, namespace)
-
-	createNamespaceErr := createDirectoryIfNotExists(namespacePath)
-	if createNamespaceErr != nil {
-		die("Error creating namespace: %s", createNamespaceErr)
-	}
-
-	tBasePath := path.Join(home, T_BASE_DIR)
 
 	return &storage.FSTasksStorage{TBaseDir: tBasePath}
+}
+
+func createNamespace(namespace string) error {
+	tBasePath, err := getBaseDir()
+	if err != nil {
+		return err
+	}
+
+	namespacePath := path.Join(tBasePath, namespace)
+
+	return createDirectoryIfNotExists(namespacePath)
 }
 
 func createDirectoryIfNotExists(directory string) error {
@@ -46,4 +48,56 @@ func createDirectoryIfNotExists(directory string) error {
 	}
 
 	return nil
+}
+
+func cleanupEmptyNamespaces(s storage.TasksStorage) error {
+	namespaces, err := s.GetNamespaces()
+	if err != nil {
+		return err
+	}
+
+	tBasePath, err := getBaseDir()
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range namespaces {
+		err = removeEmptyDir(path.Join(tBasePath, ns))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func removeEmptyDir(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("'%s' not a directory", path)
+	}
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+
+	if len(entries) == 0 {
+		return os.Remove(path)
+	}
+
+	return nil
+}
+
+func getBaseDir() (string, error) {
+	home := os.Getenv("HOME")
+	if home == "" {
+		return "", fmt.Errorf("HOME environment variable is invalid")
+	}
+
+	return path.Join(home, T_BASE_DIR), nil
 }

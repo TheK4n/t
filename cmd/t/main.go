@@ -58,128 +58,189 @@ NAMESPACE FILE
 `
 
 func main() {
-	namespace, err := getNamespaceFromEnvOrFromFile()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: %s, using default namespace (%s)\n", err, DEFAULT_NAMESPACE)
-	}
-
-	s := initTaskStorage(namespace)
+	s := initTaskStorage()
 
 	if len(os.Args) < 2 {
-		err := showTasks(namespace, s)
+		namespace := getNamespace()
+		err := createNamespace(namespace)
+		if err != nil {
+			die("Error creating namespace: %s", err)
+		}
+
+		err = showTasks(namespace, s)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		err = cleanupEmptyNamespaces(s)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(0)
+	}
+
+	handlers := map[string]func(storage.TasksStorage) error{
+		"show": cmdShow,
+
+		"add": cmdAdd,
+		"a":   cmdAdd,
+
+		"d":      cmdDone,
+		"done":   cmdDone,
+		"delete": cmdDone,
+
+		"e":    cmdEdit,
+		"edit": cmdEdit,
+
+		"get": cmdGet,
+
+		"ns":         cmdNamespaces,
+		"namespaces": cmdNamespaces,
+
+		"all": cmdAll,
+
+		"-h":     cmdHelp,
+		"--help": cmdHelp,
+
+		"-v":        cmdVersion,
+		"--version": cmdVersion,
 	}
 
 	cmd := os.Args[1]
-	switch cmd {
-	case "show":
-		showTasks(namespace, s)
-		os.Exit(0)
+	handler, found := handlers[cmd]
 
-	case "a", "add":
-		if len(os.Args) < 3 {
-			die("Not enough args")
-		}
-
-		err := addTask(namespace, strings.Join(os.Args[2:], " "), s)
+	if !found {
+		namespace := getNamespace()
+		err := createNamespace(namespace)
 		if err != nil {
-			die("Error adding task: %s", err)
+			cleanupEmptyNamespaces(s)
+			die("Error creating namespace: %s", err)
 		}
 
-		os.Exit(0)
-
-	case "d", "done", "delete":
-		if len(os.Args) < 3 {
-			die("Not enough args")
-		}
-
-		err := deleteTasksByIndexes(namespace, os.Args[2:], s)
+		err = showTaskContentByIndex(namespace, cmd, s)
 		if err != nil {
-			die("Error deleting task: %s", err)
-		}
-
-		os.Exit(0)
-
-	case "e", "edit":
-		if len(os.Args) < 3 {
-			die("Not enough args")
-		}
-
-		err := editTaskByIndex(namespace, os.Args[2], s)
-		if err != nil {
-			die("Error editing task: %s", err)
-		}
-
-		os.Exit(0)
-
-	case "get":
-		if len(os.Args) < 3 {
-			die("Not enough args")
-		}
-
-		err := showTaskContentByName(namespace, os.Args[2], s)
-		if err != nil {
-			die("Error reading task: %s", err)
-		}
-
-		os.Exit(0)
-
-	case "ns", "namespaces":
-		err := showNamespaces(s)
-		if err != nil {
-			die("Error reading namespace: %s", err)
-		}
-
-		os.Exit(0)
-
-	case "all":
-		ShowAllTasksFromAllNamespaces(s)
-
-		os.Exit(0)
-
-	case "-h", "--help":
-		showHelp()
-
-		os.Exit(0)
-
-	case "-v", "--version":
-		showVersion()
-
-		os.Exit(0)
-
-	default:
-		err := showTaskContentByIndex(namespace, cmd, s)
-		if err != nil {
+			cleanupEmptyNamespaces(s)
 			die("Error: %s", err)
 		}
 
+		cleanupEmptyNamespaces(s)
 		os.Exit(0)
 	}
+
+	err := handler(s)
+	if err != nil {
+		die("%s", err)
+	}
+
+	cleanupEmptyNamespaces(s)
+	os.Exit(0)
 }
 
-func getNamespaceFromEnvOrFromFile() (string, error) {
-	tEnv := os.Getenv("t")
-	if tEnv != "" {
-		return tEnv, nil
-	}
-
-	curdir, _ := os.Getwd()
-	foundEnvFile := findFileUpTree(curdir, ENVFILE)
-
-	if foundEnvFile == "" {
-		return DEFAULT_NAMESPACE, nil
-	}
-
-	envFileContent, err := os.ReadFile(foundEnvFile)
+func cmdShow(s storage.TasksStorage) error {
+	namespace := getNamespace()
+	err := createNamespace(namespace)
 	if err != nil {
-		return DEFAULT_NAMESPACE, fmt.Errorf("error reading env file: %s", foundEnvFile)
+		return fmt.Errorf("Error creating namespace: %s", err)
 	}
 
-	return strings.Trim(string(envFileContent), " \n"), nil
+	return showTasks(namespace, s)
+}
+
+func cmdAdd(s storage.TasksStorage) error {
+	if len(os.Args) < 3 {
+		return fmt.Errorf("%s", "Not enough args")
+	}
+
+	namespace := getNamespace()
+	err := createNamespace(namespace)
+	if err != nil {
+		return fmt.Errorf("Error creating namespace: %s", err)
+	}
+
+	err = addTask(namespace, strings.Join(os.Args[2:], " "), s)
+	if err != nil {
+		return fmt.Errorf("Error adding task: %s", err)
+	}
+
+	return nil
+}
+
+func cmdDone(s storage.TasksStorage) error {
+	if len(os.Args) < 3 {
+		return fmt.Errorf("%s", "Not enough args")
+	}
+
+	namespace := getNamespace()
+	err := createNamespace(namespace)
+	if err != nil {
+		return fmt.Errorf("Error creating namespace: %s", err)
+	}
+
+	err = deleteTasksByIndexes(namespace, os.Args[2:], s)
+	if err != nil {
+		return fmt.Errorf("Error deleting task: %s", err)
+	}
+
+	return nil
+}
+
+func cmdEdit(s storage.TasksStorage) error {
+	if len(os.Args) < 3 {
+		return fmt.Errorf("%s", "Not enough args")
+	}
+
+	namespace := getNamespace()
+	err := createNamespace(namespace)
+	if err != nil {
+		return fmt.Errorf("Error creating namespace: %s", err)
+	}
+
+	err = editTaskByIndex(namespace, os.Args[2], s)
+	if err != nil {
+		return fmt.Errorf("Error editing task: %s", err)
+	}
+
+	return nil
+}
+
+func cmdGet(s storage.TasksStorage) error {
+	if len(os.Args) < 3 {
+		return fmt.Errorf("%s", "Not enough args")
+	}
+
+	namespace := getNamespace()
+	err := createNamespace(namespace)
+	if err != nil {
+		return fmt.Errorf("Error creating namespace: %s", err)
+	}
+
+	err = showTaskContentByName(namespace, os.Args[2], s)
+	if err != nil {
+		return fmt.Errorf("Error reading task: %s", err)
+	}
+
+	return nil
+}
+
+func cmdNamespaces(s storage.TasksStorage) error {
+	err := showNamespaces(s)
+	if err != nil {
+		return fmt.Errorf("Error reading namespace: %s", err)
+	}
+
+	return nil
+}
+
+func cmdAll(s storage.TasksStorage) error {
+	return ShowAllTasksFromAllNamespaces(s)
+}
+
+func cmdHelp(_ storage.TasksStorage) error {
+	return showHelp()
+}
+
+func cmdVersion(_ storage.TasksStorage) error {
+	return showVersion()
 }
 
 func showTasks(namespace string, s storage.TasksStorage) error {
@@ -315,12 +376,14 @@ func showNamespaces(s storage.TasksStorage) error {
 	return nil
 }
 
-func showHelp() {
-	fmt.Print(HELP_MESSAGE)
+func showHelp() error {
+	_, err := fmt.Print(HELP_MESSAGE)
+	return err
 }
 
-func showVersion() {
-	fmt.Print(version)
+func showVersion() error {
+	_, err := fmt.Print(version)
+	return err
 }
 
 func showTaskContentByIndex(namespace string, index string, s storage.TasksStorage) error {
@@ -367,4 +430,35 @@ func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
 func die(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format, a...)
 	os.Exit(1)
+}
+
+func getNamespace() string {
+	namespace, err := getNamespaceFromEnvOrFromFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %s, using default namespace (%s)\n", err, DEFAULT_NAMESPACE)
+		return DEFAULT_NAMESPACE
+	}
+
+	return namespace
+}
+
+func getNamespaceFromEnvOrFromFile() (string, error) {
+	tEnv := os.Getenv("t")
+	if tEnv != "" {
+		return tEnv, nil
+	}
+
+	curdir, _ := os.Getwd()
+	foundEnvFile := findFileUpTree(curdir, ENVFILE)
+
+	if foundEnvFile == "" {
+		return DEFAULT_NAMESPACE, nil
+	}
+
+	envFileContent, err := os.ReadFile(foundEnvFile)
+	if err != nil {
+		return "", fmt.Errorf("error reading env file: %s", foundEnvFile)
+	}
+
+	return strings.Trim(string(envFileContent), " \n"), nil
 }
