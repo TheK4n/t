@@ -89,17 +89,17 @@ func DeleteTasksByIndexes(namespace string, indexes []string, s storage.TasksSto
 }
 
 func EditTaskByIndex(namespace string, index string, s storage.TasksStorage) error {
-	content, err := s.GetContentByIndex(namespace, index)
-	if err != nil {
-		return err
-	}
-
 	taskName, err := s.GetNameByIndex(namespace, index)
 	if err != nil {
 		return err
 	}
 
 	tempFile, err := createTempFile(fmt.Sprintf("t_%s_", taskName))
+	if err != nil {
+		return err
+	}
+
+	content, err := s.GetContentByIndex(namespace, index)
 	if err != nil {
 		return err
 	}
