@@ -4,11 +4,11 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	storage "github.com/thek4n/t/internal/storage"
 	"os"
 	"path"
-	"fmt"
 )
 
 const T_BASE_DIR = ".t"

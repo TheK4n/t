@@ -1,10 +1,9 @@
 package handlers
 
-
 import (
+	"fmt"
 	"os"
 	"os/exec"
-	"fmt"
 	"strings"
 
 	storage "github.com/thek4n/t/internal/storage"
@@ -167,18 +166,17 @@ func ShowTaskContentByName(namespace string, name string, s storage.TasksStorage
 	return nil
 }
 
-
 func ShowTaskContentByIndex(namespace string, index string, s storage.TasksStorage) error {
-   taskContent, err := s.GetContentByIndex(namespace, index)
-   taskName, err := s.GetNameByIndex(namespace, index)
+	taskContent, err := s.GetContentByIndex(namespace, index)
+	taskName, err := s.GetNameByIndex(namespace, index)
 
-   if err != nil {
-       return err
-   }
+	if err != nil {
+		return err
+	}
 
-   fmt.Printf("\033[1;34m# %s\033[0m\n\n", taskName)
-   fmt.Print(string(taskContent))
-   return nil
+	fmt.Printf("\033[1;34m# %s\033[0m\n\n", taskName)
+	fmt.Print(string(taskContent))
+	return nil
 }
 
 func ShowNamespaces(s storage.TasksStorage) error {
@@ -221,4 +219,3 @@ func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
 	}
 	return nil
 }
-

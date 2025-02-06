@@ -5,17 +5,16 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 	"path"
 	"path/filepath"
+	"strings"
 
-	"github.com/thek4n/t/internal/storage"
 	handlers "github.com/thek4n/t/internal/handlers"
+	"github.com/thek4n/t/internal/storage"
 )
 
 const DEFAULT_NAMESPACE = "def"
 const ENVFILE = ".tns"
-
 
 func main() {
 	s := initTaskStorage()
@@ -37,6 +36,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(0)
+		return
 	}
 
 	commands := map[string]func(storage.TasksStorage) error{
@@ -208,7 +208,6 @@ func cmdVersion(_ storage.TasksStorage) error {
 	return showVersion()
 }
 
-
 func getNamespace() string {
 	namespace, err := getNamespaceFromEnvOrFromFile()
 	if err != nil {
@@ -240,7 +239,6 @@ func getNamespaceFromEnvOrFromFile() (string, error) {
 	return strings.Trim(string(envFileContent), " \n"), nil
 }
 
-
 func findFileUpTree(startdir string, filename string) string {
 	if startdir == "/" {
 		return ""
@@ -250,7 +248,6 @@ func findFileUpTree(startdir string, filename string) string {
 	}
 	return findFileUpTree(filepath.Dir(startdir), filename)
 }
-
 
 func die(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format, a...)
