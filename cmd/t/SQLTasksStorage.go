@@ -35,6 +35,7 @@ func initTaskStorage() storage.TasksStorage {
 		content TEXT NOT NULL,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
 		updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+		read_at TEXT NULL,
 		deleted_at TEXT NULL,
 		deleted INTEGER DEFAULT 0 CHECK(deleted IN (0, 1)),
 		UNIQUE (name, namespace));
