@@ -109,7 +109,7 @@ func (ts *SqlTasksStorage) GetNameByIndex(namespace string, index int) (string, 
 	}
 
 	if index > len(tasks) || index < 1 {
-		return "", fmt.Errorf("Wrong task index: %s", index)
+		return "", fmt.Errorf("Wrong task index: %d", index)
 	}
 
 	return tasks[index-1], nil
