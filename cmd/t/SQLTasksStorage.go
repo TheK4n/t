@@ -30,10 +30,13 @@ func initTaskStorage() storage.TasksStorage {
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS
 	tasks(
-		name VARCHAR(90) NOT NULL,
+		name VARCHAR(150) NOT NULL,
 		namespace VARCHAR(30) NOT NULL,
-		updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
 		content TEXT NOT NULL,
+		created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+		updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+		deleted_at TEXT NULL,
+		deleted INTEGER DEFAULT 0 CHECK(deleted IN (0, 1)),
 		UNIQUE (name, namespace));
 	`)
 

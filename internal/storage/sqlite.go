@@ -20,7 +20,7 @@ func (ts *SqlTasksStorage) GetNamespaces() ([]string, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select distinct namespace from tasks;")
+	rows, err := db.Query("SELECT DISTINCT namespace FROM tasks WHERE deleted = 0;")
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (ts *SqlTasksStorage) Count(namespace string) (int, error) {
 	}
 	defer db.Close()
 
-	row := db.QueryRow("select COUNT(1) from tasks where namespace = $1;", namespace)
+	row := db.QueryRow("SELECT COUNT(1) FROM tasks WHERE namespace = $1 AND deleted = 0;", namespace)
 
 	namespacesCount := 0
 	err = row.Scan(&namespacesCount)
@@ -66,7 +66,7 @@ func (ts *SqlTasksStorage) GetSorted(namespace string) ([]string, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select name from tasks where namespace = $1 order by updated desc;", namespace)
+	rows, err := db.Query("SELECT name FROM tasks WHERE namespace = $1 AND deleted = 0 ORDER BY updated_at DESC;", namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (ts *SqlTasksStorage) Add(namespace string, name string) error {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("insert into tasks(name, namespace, content) values($1, $2, '');", name, namespace)
+	_, err = db.Exec("INSERT INTO tasks(name, namespace, content) VALUES($1, $2, '');", name, namespace)
 
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]by
 	}
 	defer db.Close()
 
-	row := db.QueryRow("select content from tasks where namespace = $1 and name = $2;", namespace, name)
+	row := db.QueryRow("SELECT content FROM tasks WHERE namespace = $1 AND name = $2 AND deleted = 0;", namespace, name)
 
 	taskContent := ""
 	err = row.Scan(&taskContent)
@@ -159,7 +159,7 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 		return err
 	}
 
-	_, err = db.Exec("update tasks set content = $1, updated = CURRENT_TIMESTAMP where name = $2 and namespace = $3;", string(b), name, namespace)
+	_, err = db.Exec("UPDATE tasks SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE name = $2 and namespace = $3 AND deleted = 0;", string(b), name, namespace)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []int) erro
 	}
 
 	for _, name := range names {
-		_, err = db.Exec("delete from tasks where name = $1 and namespace = $2", name, namespace)
+		_, err = db.Exec("UPDATE tasks SET deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE name = $1 and namespace = $2 AND deleted = 0", name, namespace)
 		if err != nil {
 			return err
 		}
