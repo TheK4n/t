@@ -39,12 +39,12 @@ func (ts *FSTasksStorage) GetNamespaces() ([]string, error) {
 	return result, nil
 }
 
-func (ts *FSTasksStorage) Count(namespace string) (uint, error) {
+func (ts *FSTasksStorage) Count(namespace string) (int, error) {
 	namespaceDirEntries, err := os.ReadDir(path.Join(ts.TBaseDir, namespace))
 	if err != nil {
 		return 0, err
 	}
-	return uint(len(namespaceDirEntries)), nil
+	return len(namespaceDirEntries), nil
 }
 
 func (ts *FSTasksStorage) GetSorted(namespace string) ([]string, error) {
@@ -185,23 +185,23 @@ func (ts *FSTasksStorage) GetNameByIndex(namespace string, index string) (string
 	return tasks[taskIndex-1], nil
 }
 
-func (ts *FSTasksStorage) CountLines(namespace string, name string) (uint, error) {
+func (ts *FSTasksStorage) CountLines(namespace string, name string) (int, error) {
 	return countFileLines(path.Join(ts.TBaseDir, namespace, name))
 }
 
-func countFileLines(filePath string) (uint, error) {
+func countFileLines(filePath string) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return 0, err
 	}
 
 	buf := make([]byte, 1024)
-	var count uint = 0
+	var count int = 0
 	lineSep := []byte{'\n'}
 
 	for {
 		c, err := file.Read(buf)
-		count += uint(bytes.Count(buf[:c], lineSep))
+		count += bytes.Count(buf[:c], lineSep)
 
 		switch {
 		case err == io.EOF:

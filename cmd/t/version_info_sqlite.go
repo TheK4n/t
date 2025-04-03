@@ -3,5 +3,5 @@
 package main
 
 var (
-	version = "1.1.4-sqlite"
+	version = "1.2.0-sqlite"
 )

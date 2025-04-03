@@ -51,6 +51,14 @@ NAMESPACE FILE
     ...
 `
 
+type TaskView struct {
+	Namespace           string
+	LinesCount          int
+	FormattedLinesCount string
+	Name                string
+	FormattedName       string
+}
+
 func ShowTasks(namespace string, s storage.TasksStorage) error {
 	tasks, err := s.GetSorted(namespace)
 	if err != nil {
@@ -59,18 +67,14 @@ func ShowTasks(namespace string, s storage.TasksStorage) error {
 
 	fmt.Printf("\033[1;34m# %s\033[0m\n", namespace)
 	for i, task := range tasks {
-		taskLines, _ := s.CountLines(namespace, task)
-
-		formattedTaskLines := formatLinesCount(taskLines)
-
-		formattedTaskName := strings.ReplaceAll(task, PATH_SEPARATOR_REPLACER, "/")
-		fmt.Printf("[%d] %s (%s)\n", i+1, formattedTaskName, formattedTaskLines)
+		tv := formatTaskView(namespace, task, s)
+		fmt.Printf("[%d] %s (%s)\n", i+1, tv.FormattedName, tv.FormattedLinesCount)
 	}
 
 	return nil
 }
 
-func formatLinesCount(lines uint) string {
+func formatLinesCount(lines int) string {
 	if lines > 70 {
 		return "..."
 	}
@@ -214,8 +218,25 @@ func ShowAllTasksFromAllNamespaces(s storage.TasksStorage) error {
 			return err
 		}
 		for _, task := range currentNamespaceTasks {
-			fmt.Printf("[%s] %s\n", namespace, task)
+			tv := formatTaskView(namespace, task, s)
+			fmt.Printf("[%s] %s (%s)\n", tv.Namespace, tv.FormattedName, tv.FormattedLinesCount)
 		}
 	}
 	return nil
+}
+
+func formatTaskView(namespace string, task string, s storage.TasksStorage) TaskView {
+	var tv TaskView
+
+	lines, err := s.CountLines(namespace, task)
+	if err != nil {
+		lines = 0
+	}
+	tv.LinesCount = lines
+	tv.FormattedLinesCount = formatLinesCount(lines)
+	tv.Name = task
+	tv.Namespace = namespace
+	tv.FormattedName = strings.ReplaceAll(task, PATH_SEPARATOR_REPLACER, "/")
+
+	return tv
 }

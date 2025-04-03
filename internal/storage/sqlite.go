@@ -42,7 +42,7 @@ func (ts *SqlTasksStorage) GetNamespaces() ([]string, error) {
 	return namespaces, nil
 }
 
-func (ts *SqlTasksStorage) Count(namespace string) (uint, error) {
+func (ts *SqlTasksStorage) Count(namespace string) (int, error) {
 	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return 0, err
@@ -57,7 +57,7 @@ func (ts *SqlTasksStorage) Count(namespace string) (uint, error) {
 		return 0, err
 	}
 
-	return uint(namespacesCount), nil
+	return namespacesCount, nil
 }
 
 func (ts *SqlTasksStorage) GetSorted(namespace string) ([]string, error) {
@@ -178,7 +178,7 @@ func (ts *SqlTasksStorage) WriteByIndex(namespace string, index string, r io.Rea
 	return ts.WriteByName(namespace, taskNameToWrite, r)
 }
 
-func (ts *SqlTasksStorage) CountLines(namespace string, name string) (uint, error) {
+func (ts *SqlTasksStorage) CountLines(namespace string, name string) (int, error) {
 	content, err := ts.GetContentByName(namespace, name)
 	if err != nil {
 		return 0, err
@@ -187,8 +187,8 @@ func (ts *SqlTasksStorage) CountLines(namespace string, name string) (uint, erro
 	return countRune(string(content), '\n'), nil
 }
 
-func countRune(s string, r rune) uint {
-	var count uint = 0
+func countRune(s string, r rune) int {
+	var count int = 0
 	for _, c := range s {
 		if c == r {
 			count++
