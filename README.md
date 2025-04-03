@@ -35,13 +35,13 @@ go build ./cmd/t
 
 ### Install by golang (recommended):
 ```sh
-go install github.com/thek4n/t/cmd/t@v1.3.2
+go install github.com/thek4n/t/cmd/t@v1.3.3
 ```
 
 ### Download binary
 ```sh
-wget https://github.com/TheK4n/t/releases/download/v1.3.2/t_v1.3.2_linux_amd64.tar.gz
-tar xzf t_v1.3.2_linux_amd64.tar.gz
+wget https://github.com/TheK4n/t/releases/download/v1.3.3/t_v1.3.3_linux_amd64.tar.gz
+tar xzf t_v1.3.3_linux_amd64.tar.gz
 ```
 
 
@@ -59,6 +59,6 @@ t 1    # Show task content with index 1
 Sqlite3 db as storage instead of files
 
 ```sh
-go install --tags=tsqlite github.com/thek4n/t/cmd/t@v1.3.2
-t -v  # v1.3.2-sqlite
+go install --tags=tsqlite github.com/thek4n/t/cmd/t@v1.3.3
+t -v  # v1.3.3-sqlite
 ```

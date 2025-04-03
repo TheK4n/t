@@ -122,11 +122,10 @@ func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]by
 	}
 	defer db.Close()
 
-	row := db.QueryRow(`
-		SELECT content FROM tasks
-		WHERE namespace = :namespace AND name = :name AND deleted = 0;`,
-		sql.Named("namespace", namespace), sql.Named("name", name),
-	)
+	content, err := ts.getContentByName(namespace, name)
+	if err != nil {
+		return nil, err
+	}
 
 	_, err = db.Exec(`
 		UPDATE tasks SET read_at = DATETIME('now', 'localtime') || PRINTF(' %+05d', STRFTIME('%H%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H%M', DATE('now')||'T12:00'))
@@ -137,13 +136,7 @@ func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]by
 		return nil, err
 	}
 
-	taskContent := ""
-	err = row.Scan(&taskContent)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(taskContent), nil
+	return content, nil
 }
 
 func (ts *SqlTasksStorage) GetContentByIndex(namespace string, index int) ([]byte, error) {
@@ -190,12 +183,33 @@ func (ts *SqlTasksStorage) WriteByIndex(namespace string, index int, r io.Reader
 }
 
 func (ts *SqlTasksStorage) CountLines(namespace string, name string) (int, error) {
-	content, err := ts.GetContentByName(namespace, name)
+	content, err := ts.getContentByName(namespace, name)
 	if err != nil {
 		return 0, err
 	}
-
 	return countRune(string(content), '\n'), nil
+}
+
+func (ts *SqlTasksStorage) getContentByName(namespace string, name string) ([]byte, error) {
+	db, err := sql.Open("sqlite3", ts.DbPath)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	row := db.QueryRow(`
+		SELECT content FROM tasks
+		WHERE namespace = :namespace AND name = :name AND deleted = 0;`,
+		sql.Named("namespace", namespace), sql.Named("name", name),
+	)
+
+	taskContent := []byte{}
+	err = row.Scan(&taskContent)
+	if err != nil {
+		return nil, err
+	}
+
+	return taskContent, nil
 }
 
 func countRune(s string, r rune) int {
