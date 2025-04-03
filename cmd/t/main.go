@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	handlers "github.com/thek4n/t/internal/handlers"
@@ -16,68 +18,92 @@ import (
 const DEFAULT_NAMESPACE = "def"
 const ENVFILE = ".tns"
 
+var COMMANDS = map[string]func(storage.TasksStorage, []string, string) error{
+	"show": cmdShow,
+
+	"add": cmdAdd,
+	"a":   cmdAdd,
+
+	"d":      cmdDone,
+	"done":   cmdDone,
+	"delete": cmdDone,
+
+	"e":    cmdEdit,
+	"edit": cmdEdit,
+
+	"get": cmdGet,
+
+	"ns":         cmdNamespaces,
+	"namespaces": cmdNamespaces,
+
+	"all": cmdAll,
+
+	"-h":     cmdHelp,
+	"--help": cmdHelp,
+
+	"-v":        cmdVersion,
+	"--version": cmdVersion,
+}
+
 func main() {
+	osArgs := os.Args[1:] // reject program name
+
 	s := initTaskStorage()
 
-	if len(os.Args) < 2 {
+	argsEmpty := len(osArgs) < 1
+	if argsEmpty {
 		namespace := getNamespace()
-		err := createNamespace(namespace)
+		err := showTasks(s, namespace)
 		if err != nil {
-			die("Error creating namespace: %s", err)
-		}
-
-		err = handlers.ShowTasks(namespace, s)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		err = cleanupEmptyNamespaces(s)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			cleanupEmptyNamespaces(s)
+			die("Error show namespaces: %s", err)
 		}
 		os.Exit(0)
-		return
 	}
 
-	commands := map[string]func(storage.TasksStorage) error{
-		"show": cmdShow,
+	firstArgumentIsWord, _ := regexp.MatchString(`[a-zA-Z]+`, osArgs[0])
+	_, firstArgumentIsCommand := COMMANDS[osArgs[0]]
 
-		"add": cmdAdd,
-		"a":   cmdAdd,
+	firstArgumentIsNamespace := firstArgumentIsWord && !firstArgumentIsCommand
 
-		"d":      cmdDone,
-		"done":   cmdDone,
-		"delete": cmdDone,
-
-		"e":    cmdEdit,
-		"edit": cmdEdit,
-
-		"get": cmdGet,
-
-		"ns":         cmdNamespaces,
-		"namespaces": cmdNamespaces,
-
-		"all": cmdAll,
-
-		"-h":     cmdHelp,
-		"--help": cmdHelp,
-
-		"-v":        cmdVersion,
-		"--version": cmdVersion,
+	var namespace string
+	if firstArgumentIsNamespace {
+		namespace = osArgs[0]
+		osArgs = osArgs[1:] // reject namespace from args
+	} else {
+		namespace = getNamespace()
 	}
 
-	cmd := os.Args[1]
-	handler, found := commands[cmd]
+	argsEmpty = len(osArgs) < 1
+	if argsEmpty {
+		err := showTasks(s, namespace)
+		if err != nil {
+			cleanupEmptyNamespaces(s)
+			die("Error show namespaces: %s", err)
+		}
+		os.Exit(0)
+	}
 
-	if !found {
-		namespace := getNamespace()
+	err := createNamespace(namespace)
+	if err != nil {
+		die("Error creating namespace: %s", err)
+	}
+
+	commandArgumentIsNumber, _ := regexp.MatchString(`[0-9]+`, osArgs[0])
+	if commandArgumentIsNumber {
 		err := createNamespace(namespace)
 		if err != nil {
 			cleanupEmptyNamespaces(s)
 			die("Error creating namespace: %s", err)
 		}
 
-		err = handlers.ShowTaskContentByIndex(namespace, cmd, s)
+		index, err := strconv.Atoi(osArgs[0])
+		if err != nil {
+			cleanupEmptyNamespaces(s)
+			die("Error parse index")
+		}
+
+		err = handlers.ShowTaskContentByIndex(namespace, index, s)
 		if err != nil {
 			cleanupEmptyNamespaces(s)
 			die("Error: %s", err)
@@ -87,13 +113,33 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := handler(s)
+	handler, found := COMMANDS[osArgs[0]]
+	if !found {
+		die("Command '%s' not found", osArgs[0])
+	}
+
+	err = createNamespace(namespace)
 	if err != nil {
-		die("%s", err)
+		cleanupEmptyNamespaces(s)
+		die("Error creating namespace: %s", err)
+	}
+
+	err = handler(s, osArgs[1:], namespace)
+	if err != nil {
+		die("Error on command '%s': %s", osArgs[0], err)
 	}
 
 	cleanupEmptyNamespaces(s)
 	os.Exit(0)
+}
+
+func showTasks(s storage.TasksStorage, namespace string) error {
+	err := createNamespace(namespace)
+	if err != nil {
+		return err
+	}
+
+	return handlers.ShowTasks(namespace, s)
 }
 
 func showVersion() error {
@@ -101,28 +147,16 @@ func showVersion() error {
 	return err
 }
 
-func cmdShow(s storage.TasksStorage) error {
-	namespace := getNamespace()
-	err := createNamespace(namespace)
-	if err != nil {
-		return fmt.Errorf("Error creating namespace: %s", err)
-	}
-
+func cmdShow(s storage.TasksStorage, _ []string, namespace string) error {
 	return handlers.ShowTasks(namespace, s)
 }
 
-func cmdAdd(s storage.TasksStorage) error {
-	if len(os.Args) < 3 {
+func cmdAdd(s storage.TasksStorage, args []string, namespace string) error {
+	if len(args) < 1 {
 		return fmt.Errorf("%s", "Not enough args")
 	}
 
-	namespace := getNamespace()
-	err := createNamespace(namespace)
-	if err != nil {
-		return fmt.Errorf("Error creating namespace: %s", err)
-	}
-
-	err = handlers.AddTask(namespace, strings.Join(os.Args[2:], " "), s)
+	err := handlers.AddTask(namespace, strings.Join(args, " "), s)
 	if err != nil {
 		return fmt.Errorf("Error adding task: %s", err)
 	}
@@ -130,18 +164,17 @@ func cmdAdd(s storage.TasksStorage) error {
 	return nil
 }
 
-func cmdDone(s storage.TasksStorage) error {
-	if len(os.Args) < 3 {
+func cmdDone(s storage.TasksStorage, args []string, namespace string) error {
+	if len(args) < 1 {
 		return fmt.Errorf("%s", "Not enough args")
 	}
 
-	namespace := getNamespace()
-	err := createNamespace(namespace)
+	indexes, err := atoiIndexes(args)
 	if err != nil {
-		return fmt.Errorf("Error creating namespace: %s", err)
+		return fmt.Errorf("Error parse indexes: %s", err)
 	}
 
-	err = handlers.DeleteTasksByIndexes(namespace, os.Args[2:], s)
+	err = handlers.DeleteTasksByIndexes(namespace, indexes, s)
 	if err != nil {
 		return fmt.Errorf("Error deleting task: %s", err)
 	}
@@ -149,18 +182,31 @@ func cmdDone(s storage.TasksStorage) error {
 	return nil
 }
 
-func cmdEdit(s storage.TasksStorage) error {
-	if len(os.Args) < 3 {
+func atoiIndexes(indexes []string) ([]int, error) {
+	var res []int
+
+	for _, index := range indexes {
+		idx, err := strconv.Atoi(index)
+		if err != nil {
+			return nil, fmt.Errorf("Error parse index %s: %s", index, err)
+		}
+		res = append(res, idx)
+	}
+
+	return res, nil
+}
+
+func cmdEdit(s storage.TasksStorage, args []string, namespace string) error {
+	if len(args) < 1 {
 		return fmt.Errorf("%s", "Not enough args")
 	}
 
-	namespace := getNamespace()
-	err := createNamespace(namespace)
+	index, err := strconv.Atoi(args[0])
 	if err != nil {
-		return fmt.Errorf("Error creating namespace: %s", err)
+		return fmt.Errorf("Error parse index %s: %s", args[0], err)
 	}
 
-	err = handlers.EditTaskByIndex(namespace, os.Args[2], s)
+	err = handlers.EditTaskByIndex(namespace, index, s)
 	if err != nil {
 		return fmt.Errorf("Error editing task: %s", err)
 	}
@@ -168,18 +214,12 @@ func cmdEdit(s storage.TasksStorage) error {
 	return nil
 }
 
-func cmdGet(s storage.TasksStorage) error {
-	if len(os.Args) < 3 {
+func cmdGet(s storage.TasksStorage, args []string, namespace string) error {
+	if len(args) < 1 {
 		return fmt.Errorf("%s", "Not enough args")
 	}
 
-	namespace := getNamespace()
-	err := createNamespace(namespace)
-	if err != nil {
-		return fmt.Errorf("Error creating namespace: %s", err)
-	}
-
-	err = handlers.ShowTaskContentByName(namespace, os.Args[2], s)
+	err := handlers.ShowTaskContentByName(namespace, args[0], s)
 	if err != nil {
 		return fmt.Errorf("Error reading task: %s", err)
 	}
@@ -187,7 +227,7 @@ func cmdGet(s storage.TasksStorage) error {
 	return nil
 }
 
-func cmdNamespaces(s storage.TasksStorage) error {
+func cmdNamespaces(s storage.TasksStorage, _ []string, _ string) error {
 	err := handlers.ShowNamespaces(s)
 	if err != nil {
 		return fmt.Errorf("Error reading namespace: %s", err)
@@ -196,15 +236,15 @@ func cmdNamespaces(s storage.TasksStorage) error {
 	return nil
 }
 
-func cmdAll(s storage.TasksStorage) error {
+func cmdAll(s storage.TasksStorage, _ []string, _ string) error {
 	return handlers.ShowAllTasksFromAllNamespaces(s)
 }
 
-func cmdHelp(_ storage.TasksStorage) error {
+func cmdHelp(_ storage.TasksStorage, _ []string, _ string) error {
 	return handlers.ShowHelp()
 }
 
-func cmdVersion(_ storage.TasksStorage) error {
+func cmdVersion(_ storage.TasksStorage, _ []string, _ string) error {
 	return showVersion()
 }
 

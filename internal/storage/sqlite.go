@@ -7,7 +7,6 @@ import (
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"io"
-	"strconv"
 )
 
 type SqlTasksStorage struct {
@@ -103,18 +102,17 @@ func (ts *SqlTasksStorage) Add(namespace string, name string) error {
 	return nil
 }
 
-func (ts *SqlTasksStorage) GetNameByIndex(namespace string, index string) (string, error) {
+func (ts *SqlTasksStorage) GetNameByIndex(namespace string, index int) (string, error) {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return "", err
 	}
 
-	taskIndex, err := strconv.Atoi(index)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+	if index > len(tasks) || index < 1 {
 		return "", fmt.Errorf("Wrong task index: %s", index)
 	}
 
-	return tasks[taskIndex-1], nil
+	return tasks[index-1], nil
 }
 
 func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]byte, error) {
@@ -135,7 +133,7 @@ func (ts *SqlTasksStorage) GetContentByName(namespace string, name string) ([]by
 	return []byte(taskContent), nil
 }
 
-func (ts *SqlTasksStorage) GetContentByIndex(namespace string, index string) ([]byte, error) {
+func (ts *SqlTasksStorage) GetContentByIndex(namespace string, index int) ([]byte, error) {
 	taskNameToRead, err := ts.GetNameByIndex(namespace, index)
 	if err != nil {
 		return nil, err
@@ -169,7 +167,7 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 	return nil
 }
 
-func (ts *SqlTasksStorage) WriteByIndex(namespace string, index string, r io.Reader) error {
+func (ts *SqlTasksStorage) WriteByIndex(namespace string, index int, r io.Reader) error {
 	taskNameToWrite, err := ts.GetNameByIndex(namespace, index)
 	if err != nil {
 		return err
@@ -197,7 +195,7 @@ func countRune(s string, r rune) int {
 	return count
 }
 
-func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []string) error {
+func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []int) error {
 	db, err := sql.Open("sqlite3", ts.DbPath)
 	if err != nil {
 		return err

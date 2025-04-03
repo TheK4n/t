@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -87,21 +86,20 @@ func sortTasks(tasks []os.DirEntry) error {
 	return sortErr
 }
 
-func (ts *FSTasksStorage) GetContentByIndex(namespace string, index string) ([]byte, error) {
+func (ts *FSTasksStorage) GetContentByIndex(namespace string, index int) ([]byte, error) {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	taskIndex, err := strconv.Atoi(index)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-		return nil, fmt.Errorf("Wrong task index: %s", index)
+	if index > len(tasks) || index < 1 {
+		return nil, fmt.Errorf("Wrong task index: %d", index)
 	}
 
-	taskNameToRead := tasks[taskIndex-1]
+	taskNameToRead := tasks[index-1]
 	taskContent, err := os.ReadFile(path.Join(ts.TBaseDir, namespace, taskNameToRead))
 	if err != nil {
-		return nil, fmt.Errorf("Error reading task: %w", err)
+		return nil, fmt.Errorf("Error reading file: %w", err)
 	}
 
 	return taskContent, nil
@@ -110,28 +108,27 @@ func (ts *FSTasksStorage) GetContentByIndex(namespace string, index string) ([]b
 func (ts *FSTasksStorage) GetContentByName(namespace string, name string) ([]byte, error) {
 	content, err := os.ReadFile(path.Join(ts.TBaseDir, namespace, name))
 	if err != nil {
-		return nil, fmt.Errorf("Error reading task: %w", err)
+		return nil, fmt.Errorf("Error reading file: %w", err)
 	}
 
 	return content, nil
 }
 
-func (ts *FSTasksStorage) DeleteByIndexes(namespace string, indexes []string) error {
+func (ts *FSTasksStorage) DeleteByIndexes(namespace string, indexes []int) error {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return err
 	}
 
 	for _, inputedTaskIndex := range indexes {
-		taskIndex, err := strconv.Atoi(inputedTaskIndex)
-		if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
-			return fmt.Errorf("Wrong task index: %s", inputedTaskIndex)
+		if inputedTaskIndex > len(tasks) || inputedTaskIndex < 1 {
+			return fmt.Errorf("Wrong task index: %d", inputedTaskIndex)
 		}
 
-		taskNameToDelete := tasks[taskIndex-1]
+		taskNameToDelete := tasks[inputedTaskIndex-1]
 		deleteErr := os.Remove(path.Join(ts.TBaseDir, namespace, taskNameToDelete))
 		if deleteErr != nil {
-			return fmt.Errorf("Error remove task: %s", deleteErr)
+			return fmt.Errorf("Error remove file: %s", deleteErr)
 		}
 	}
 
@@ -143,7 +140,7 @@ func (ts *FSTasksStorage) Add(namespace string, name string) error {
 
 	err := os.WriteFile(path.Join(ts.TBaseDir, namespace, name), []byte{}, 0644)
 	if err != nil {
-		return fmt.Errorf("Error write task: %s", err)
+		return fmt.Errorf("Error write file: %s", err)
 	}
 
 	return nil
@@ -162,7 +159,7 @@ func (ts *FSTasksStorage) WriteByName(namespace string, name string, r io.Reader
 	return err
 }
 
-func (ts *FSTasksStorage) WriteByIndex(namespace string, index string, r io.Reader) error {
+func (ts *FSTasksStorage) WriteByIndex(namespace string, index int, r io.Reader) error {
 	taskNameToEdit, err := ts.GetNameByIndex(namespace, index)
 	if err != nil {
 		return err
@@ -171,18 +168,17 @@ func (ts *FSTasksStorage) WriteByIndex(namespace string, index string, r io.Read
 	return ts.WriteByName(namespace, taskNameToEdit, r)
 }
 
-func (ts *FSTasksStorage) GetNameByIndex(namespace string, index string) (string, error) {
+func (ts *FSTasksStorage) GetNameByIndex(namespace string, index int) (string, error) {
 	tasks, err := ts.GetSorted(namespace)
 	if err != nil {
 		return "", err
 	}
 
-	taskIndex, err := strconv.Atoi(index)
-	if err != nil || taskIndex > len(tasks) || taskIndex < 1 {
+	if index > len(tasks) || index < 1 {
 		return "", fmt.Errorf("Wrong task index")
 	}
 
-	return tasks[taskIndex-1], nil
+	return tasks[index-1], nil
 }
 
 func (ts *FSTasksStorage) CountLines(namespace string, name string) (int, error) {

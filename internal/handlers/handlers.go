@@ -13,42 +13,44 @@ const PATH_SEPARATOR_REPLACER = "%2F"
 const HELP_MESSAGE = `T simple task tracker
 
 USAGE
-    t                            - Show tasks in format '[INDEX] TASK NAME (LINES)'
-    t get (TASK)                 - Get task content
-    t show                       - Show tasks in format '[INDEX] TASK NAME (LINES)'
-    t (INDEX)                    - Show task content
-    t add (X X X)                - Add task with name X X X
-    t edit (INDEX)               - Edit task with INDEX by \$EDITOR
-    t done (INDEX) [INDEX] ...   - Delete tasks with INDEXes
-    t namespaces                 - Show namespaces
-    t --help                     - Show this message
-    t --version                  - Show version
+	t                            - Show tasks in format '[INDEX] TASK NAME (LINES)'
+	t get (TASK)                 - Get task content
+	t show                       - Show tasks in format '[INDEX] TASK NAME (LINES)'
+	t (INDEX)                    - Show task content
+	t add (X X X)                - Add task with name X X X
+	t edit (INDEX)               - Edit task with INDEX by \$EDITOR
+	t done (INDEX) [INDEX] ...   - Delete tasks with INDEXes
+	t namespaces                 - Show namespaces
+	t --help                     - Show this message
+	t --version                  - Show version
 
-    t a       - alias for add
-    t e       - alias for edit
-    t d       - alias for done
-    t delete  - alias for done
-    t ns      - alias for namespaces
+	t a       - alias for add
+	t e       - alias for edit
+	t d       - alias for done
+	t delete  - alias for done
+	t ns      - alias for namespaces
 
 NAMESPACES
-    t namespaces             # show namespaces
-    t=work t a fix bug 211   # add task in workspace 'work'
-    t=work t                 # show tasks in workspace 'work'
+	t namespaces             # show namespaces
+	t=work t a fix bug 211   # add task in workspace 'work'
+	t=work t                 # show tasks in workspace 'work'
+
+	t <namespace> ...        # optional argument namespace before commands
 
 NAMESPACE FILE
-    File with name '.tns' can be in current directory or any directory up the tree
-    File contains name of namespace
-    Environment variable 't' overwrite using this file
+	File with name '.tns' can be in current directory or any directory up the tree
+	File contains name of namespace
+	Environment variable 't' overwrite using this file
 
-    Example:
-    $ cat .tns
-    dotfiles
-    $ t show
-    # dotfiles
-    ...
-    $ t=storage t
-    # storage
-    ...
+	Example:
+	$ cat .tns
+	dotfiles
+	$ t show
+	# dotfiles
+	...
+	$ t=storage t
+	# storage
+	...
 `
 
 type TaskView struct {
@@ -88,11 +90,11 @@ func AddTask(namespace string, name string, s storage.TasksStorage) error {
 	return s.Add(namespace, name)
 }
 
-func DeleteTasksByIndexes(namespace string, indexes []string, s storage.TasksStorage) error {
+func DeleteTasksByIndexes(namespace string, indexes []int, s storage.TasksStorage) error {
 	return s.DeleteByIndexes(namespace, indexes)
 }
 
-func EditTaskByIndex(namespace string, index string, s storage.TasksStorage) error {
+func EditTaskByIndex(namespace string, index int, s storage.TasksStorage) error {
 	taskName, err := s.GetNameByIndex(namespace, index)
 	if err != nil {
 		return err
@@ -170,7 +172,7 @@ func ShowTaskContentByName(namespace string, name string, s storage.TasksStorage
 	return nil
 }
 
-func ShowTaskContentByIndex(namespace string, index string, s storage.TasksStorage) error {
+func ShowTaskContentByIndex(namespace string, index int, s storage.TasksStorage) error {
 	taskContent, err := s.GetContentByIndex(namespace, index)
 	taskName, err := s.GetNameByIndex(namespace, index)
 
