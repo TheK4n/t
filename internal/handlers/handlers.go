@@ -100,7 +100,7 @@ func EditTaskByIndex(namespace string, index int, s storage.TasksStorage) error 
 		return err
 	}
 
-	tempFile, err := createTempFile(fmt.Sprintf("t_%s_", taskName))
+	tempFile, err := createTempFile(fmt.Sprintf("t_%s_", strings.ReplaceAll(taskName, "/", PATH_SEPARATOR_REPLACER)))
 	if err != nil {
 		return err
 	}
@@ -175,6 +175,7 @@ func ShowTaskContentByName(namespace string, name string, s storage.TasksStorage
 func ShowTaskContentByIndex(namespace string, index int, s storage.TasksStorage) error {
 	taskContent, err := s.GetContentByIndex(namespace, index)
 	taskName, err := s.GetNameByIndex(namespace, index)
+	taskName = strings.ReplaceAll(taskName, PATH_SEPARATOR_REPLACER, "/")
 
 	if err != nil {
 		return err
