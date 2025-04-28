@@ -137,20 +137,26 @@ func EditTaskByIndex(namespace string, index int, s storage.TasksStorage) error 
 }
 
 func createTempFile(pattern string) (*os.File, error) {
-	tempDir := "/tmp"
-	if !exists(tempDir) {
-		tempDir = os.Getenv("TMPDIR")
-	}
-
-	if tempDir == "" {
-		tempDir = "."
-	}
+	tempDir := getTempDir()
 
 	tempFile, err := os.CreateTemp(tempDir, pattern)
 	if err != nil {
 		return nil, err
 	}
 	return tempFile, nil
+}
+
+func getTempDir() string {
+	tempDir := os.Getenv("TMPDIR")
+	if tempDir != "" && exists(tempDir) {
+		return tempDir
+	}
+
+	if exists("/tmp") {
+		return "/tmp"
+	}
+
+	return "."
 }
 
 func exists(path string) bool {
