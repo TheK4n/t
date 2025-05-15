@@ -23,13 +23,15 @@ var COMMANDS = map[string]func(storage.TasksStorage, []string, string) error{
 
 	"add": cmdAdd,
 	"a":   cmdAdd,
+	"ф":   cmdAdd,
 
-	"d":      cmdDone,
 	"done":   cmdDone,
 	"delete": cmdDone,
+	"d":      cmdDone,
+	"в":      cmdDone,
 
-	"e":    cmdEdit,
 	"edit": cmdEdit,
+	"у":    cmdEdit,
 
 	"get": cmdGet,
 
