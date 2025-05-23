@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	storage "github.com/thek4n/t/internal/storage"
+	storage "github.com/thek4n/t/v2/internal/storage"
 	"os"
 	"path"
 )

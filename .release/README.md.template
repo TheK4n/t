@@ -53,12 +53,3 @@ t      # Show tasks
 t e 1  # Edit task content
 t 1    # Show task content with index 1
 ```
-
-
-### Install with sqlite support
-Sqlite3 db as storage instead of files
-
-```sh
-go install --tags=tsqlite github.com/thek4n/t/cmd/t@%VERSION%
-t -v  # %VERSION%-sqlite
-```

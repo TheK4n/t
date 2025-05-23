@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	storage "github.com/thek4n/t/internal/storage"
+	storage "github.com/thek4n/t/v2/internal/storage"
 )
 
 const PATH_SEPARATOR_REPLACER = "%2F"
@@ -21,6 +21,7 @@ USAGE
 	t edit (INDEX)               - Edit task with INDEX by \$EDITOR
 	t done (INDEX) [INDEX] ...   - Delete tasks with INDEXes
 	t namespaces                 - Show namespaces
+	t dl (INDEX) (TIME)          - Set notification deadline for task with INDEX
 	t --help                     - Show this message
 	t --version                  - Show version
 

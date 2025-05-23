@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	handlers "github.com/thek4n/t/internal/handlers"
-	"github.com/thek4n/t/internal/storage"
+	handlers "github.com/thek4n/t/v2/internal/handlers"
+	"github.com/thek4n/t/v2/internal/storage"
 )
 
 const DEFAULT_NAMESPACE = "def"

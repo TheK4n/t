@@ -16,29 +16,13 @@ func main() {
 	}
 
 	version := strings.Trim(string(versionFileContent), " \n")
-	content := fmt.Sprintf(`//go:build !tsqlite
-
-package main
+	contentSqlite := fmt.Sprintf(`package main
 
 var (
 	version = "%s"
 )
 `, version)
-
-	err := os.WriteFile("version_info.go", []byte(content), 0644)
-	if err != nil {
-		log.Fatalf("Failed to write version info: %s", err)
-	}
-
-	contentSqlite := fmt.Sprintf(`//go:build tsqlite
-
-package main
-
-var (
-	version = "%s-sqlite"
-)
-`, version)
-	err = os.WriteFile("version_info_sqlite.go", []byte(contentSqlite), 0644)
+	err := os.WriteFile("version_info.go", []byte(contentSqlite), 0644)
 	if err != nil {
 		log.Fatalf("Failed to write version info: %s", err)
 	}

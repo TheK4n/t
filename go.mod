@@ -1,4 +1,4 @@
-module github.com/thek4n/t
+module github.com/thek4n/t/v2
 
 go 1.22.0
 
