@@ -1,6 +1,14 @@
 package storage
 
-import "io"
+import (
+	"io"
+	"time"
+)
+
+type Task struct {
+	Name      string
+	Namespace string
+}
 
 type TasksStorage interface {
 	GetNamespaces() ([]string, error)
@@ -14,4 +22,6 @@ type TasksStorage interface {
 	WriteByIndex(namespace string, index int, r io.Reader) error
 	Add(namespace string, name string) error
 	CountLines(namespace string, name string) (int, error)
+	SetNotifyDeadline(namespace string, name string, deadline time.Time) error
+	GetExpired() ([]Task, error)
 }

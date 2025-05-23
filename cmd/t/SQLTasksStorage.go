@@ -1,5 +1,3 @@
-//go:build tsqlite
-
 package main
 
 import (
@@ -38,6 +36,7 @@ func initTaskStorage() storage.TasksStorage {
 		read_at TEXT NULL,
 		deleted_at TEXT NULL,
 		deleted INTEGER DEFAULT 0 CHECK(deleted IN (0, 1)),
+		notify_after TEXT NULL,
 		UNIQUE (name, namespace));
 	`)
 
@@ -46,14 +45,6 @@ func initTaskStorage() storage.TasksStorage {
 	}
 
 	return &storage.SqlTasksStorage{DbPath: dbPath}
-}
-
-func createNamespace(_ string) error {
-	return nil
-}
-
-func cleanupEmptyNamespaces(_ storage.TasksStorage) error {
-	return nil
 }
 
 func getBaseDir() (string, error) {

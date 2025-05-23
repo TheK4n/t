@@ -1,5 +1,3 @@
-//go:build tsqlite
-
 package storage
 
 import (
@@ -7,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"io"
+	"time"
 )
 
 type SqlTasksStorage struct {
@@ -165,7 +164,7 @@ func (ts *SqlTasksStorage) WriteByName(namespace string, name string, r io.Reade
 		return err
 	}
 
-	_, err = db.Exec(`UPDATE tasks SET content = $1, updated_at = DATETIME('now', 'localtime') || PRINTF(' %+05d', STRFTIME('%H%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H%M', DATE('now')||'T12:00')) WHERE name = $2 and namespace = $3 AND deleted = 0;`, string(b), name, namespace)
+	_, err = db.Exec(`UPDATE tasks SET content = $1, updated_at = DATETIME('now', 'localtime') || PRINTF(' %+05d', STRFTIME('%H%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H%M', DATE('now')||'T12:00')) WHERE name = $2 AND namespace = $3 AND deleted = 0;`, string(b), name, namespace)
 	if err != nil {
 		return err
 	}
@@ -239,11 +238,57 @@ func (ts *SqlTasksStorage) DeleteByIndexes(namespace string, indexes []int) erro
 	}
 
 	for _, name := range names {
-		_, err = db.Exec(`UPDATE tasks SET deleted = 1, deleted_at = DATETIME('now', 'localtime') || PRINTF(' %+05d', STRFTIME('%H%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H%M', DATE('now')||'T12:00')) WHERE name = $1 and namespace = $2 AND deleted = 0`, name, namespace)
+		_, err = db.Exec(`UPDATE tasks SET deleted = 1, deleted_at = DATETIME('now', 'localtime') || PRINTF(' %+05d', STRFTIME('%H%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H%M', DATE('now')||'T12:00')) WHERE name = $1 AND namespace = $2 AND deleted = 0`, name, namespace)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (ts *SqlTasksStorage) SetNotifyDeadline(namespace string, name string, deadline time.Time) error {
+	db, err := sql.Open("sqlite3", ts.DbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	time := timeToISO8601(deadline)
+
+	_, err = db.Exec(`UPDATE tasks SET notify_after = $1 WHERE name = $2 AND namespace = $3`, time, name, namespace)
+
+	return err
+}
+
+func timeToISO8601(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05 -0700")
+
+}
+
+func (ts *SqlTasksStorage) GetExpired() ([]Task, error) {
+	db, err := sql.Open("sqlite3", ts.DbPath)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	rows, err := db.Query(`SELECT name, namespace FROM tasks WHERE deleted = 0 AND notify_after < DATETIME('now', 'localtime') || PRINTF('%+05d', STRFTIME('%H:%M', DATE('now')||'T12:00', 'localtime') - STRFTIME('%H:%M', DATE('now')||'T12:00')) ORDER BY updated_at DESC;`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tasks := []Task{}
+	for rows.Next() {
+		var task Task
+		err := rows.Scan(&task.Name, &task.Namespace)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }
