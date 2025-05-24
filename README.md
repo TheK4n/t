@@ -30,20 +30,14 @@ Build dependencies:
 ```sh
 git clone https://github.com/thek4n/t.git
 cd t
+git checkout v2
 go build ./cmd/t
 ```
 
 ### Install by golang (recommended):
 ```sh
-go install github.com/thek4n/t/cmd/t@v2.0.0
+go install github.com/thek4n/t/v2/cmd/t
 ```
-
-### Download binary
-```sh
-wget https://github.com/TheK4n/t/releases/download/v2.0.0/t_v2.0.0_linux_amd64.tar.gz
-tar xzf t_v2.0.0_linux_amd64.tar.gz
-```
-
 
 ## Usage
 ```sh
