@@ -32,6 +32,7 @@ var COMMANDS = map[string]func(storage.TasksStorage, []string, string) error{
 	"в":      cmdDone,
 
 	"edit": cmdEdit,
+	"e":    cmdEdit,
 	"у":    cmdEdit,
 
 	"get": cmdGet,
