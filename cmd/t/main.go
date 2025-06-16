@@ -161,7 +161,7 @@ func cmdAdd(s storage.TasksStorage, args []string, namespace string) error {
 
 	err := handlers.AddTask(namespace, strings.Join(args, " "), s)
 	if err != nil {
-		return fmt.Errorf("Error adding task: %s", err)
+		return fmt.Errorf("error adding task: %s", err)
 	}
 
 	return nil
@@ -174,12 +174,12 @@ func cmdDone(s storage.TasksStorage, args []string, namespace string) error {
 
 	indexes, err := atoiIndexes(args)
 	if err != nil {
-		return fmt.Errorf("Error parse indexes: %s", err)
+		return fmt.Errorf("error parse indexes: %s", err)
 	}
 
 	err = handlers.DeleteTasksByIndexes(namespace, indexes, s)
 	if err != nil {
-		return fmt.Errorf("Error deleting task: %s", err)
+		return fmt.Errorf("error deleting task: %s", err)
 	}
 
 	return nil
@@ -191,7 +191,7 @@ func atoiIndexes(indexes []string) ([]int, error) {
 	for _, index := range indexes {
 		idx, err := strconv.Atoi(index)
 		if err != nil {
-			return nil, fmt.Errorf("Error parse index %s: %s", index, err)
+			return nil, fmt.Errorf("error parse index %s: %s", index, err)
 		}
 		res = append(res, idx)
 	}
@@ -206,12 +206,12 @@ func cmdEdit(s storage.TasksStorage, args []string, namespace string) error {
 
 	index, err := strconv.Atoi(args[0])
 	if err != nil {
-		return fmt.Errorf("Error parse index %s: %s", args[0], err)
+		return fmt.Errorf("error parse index %s: %s", args[0], err)
 	}
 
 	err = handlers.EditTaskByIndex(namespace, index, s)
 	if err != nil {
-		return fmt.Errorf("Error editing task: %s", err)
+		return fmt.Errorf("error editing task: %s", err)
 	}
 
 	return nil
@@ -224,7 +224,7 @@ func cmdGet(s storage.TasksStorage, args []string, namespace string) error {
 
 	err := handlers.ShowTaskContentByName(namespace, args[0], s)
 	if err != nil {
-		return fmt.Errorf("Error reading task: %s", err)
+		return fmt.Errorf("error reading task: %s", err)
 	}
 
 	return nil
@@ -233,7 +233,7 @@ func cmdGet(s storage.TasksStorage, args []string, namespace string) error {
 func cmdNamespaces(s storage.TasksStorage, _ []string, _ string) error {
 	err := handlers.ShowNamespaces(s)
 	if err != nil {
-		return fmt.Errorf("Error reading namespace: %s", err)
+		return fmt.Errorf("error reading namespace: %s", err)
 	}
 
 	return nil
@@ -258,17 +258,17 @@ func cmdSetDeadline(s storage.TasksStorage, args []string, namespace string) err
 
 	index, err := strconv.Atoi(args[0])
 	if err != nil {
-		return fmt.Errorf("Error parse index %s: %s", args[0], err)
+		return fmt.Errorf("error parse index %s: %s", args[0], err)
 	}
 
 	name, err := s.GetNameByIndex(namespace, index)
 	if err != nil {
-		return fmt.Errorf("Error setting deadline for index %s: %s", args[0], err)
+		return fmt.Errorf("error setting deadline for index %s: %s", args[0], err)
 	}
 
 	date, err := parseTime(args[1])
 	if err != nil {
-		return fmt.Errorf("Error parse date '%s': %s", args[1], err)
+		return fmt.Errorf("error parse date '%s': %s", args[1], err)
 	}
 
 	return s.SetNotifyDeadline(namespace, name, date)
@@ -294,7 +294,7 @@ func parseTime(t string) (time.Time, error) {
 		return nextWeekMorning(), nil
 	}
 
-	return time.Time{}, fmt.Errorf("No match")
+	return time.Time{}, fmt.Errorf("no match")
 }
 
 func timeCurrentDayOrNextDay(t string) (time.Time, error) {

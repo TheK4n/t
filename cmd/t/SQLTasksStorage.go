@@ -9,12 +9,14 @@ import (
 	"path"
 )
 
-const T_BASE_DIR = ".t"
-
 func initTaskStorage() storage.TasksStorage {
 	tBasePath, err := getBaseDir()
 	if err != nil {
-		die("%s", err.Error())
+		die("%s", err)
+	}
+	err = os.MkdirAll(tBasePath, 0777)
+	if err != nil {
+		die("cannot create data directory: %s", err)
 	}
 
 	dbPath := path.Join(tBasePath, "t.sqlite3")
@@ -48,10 +50,14 @@ func initTaskStorage() storage.TasksStorage {
 }
 
 func getBaseDir() (string, error) {
-	home := os.Getenv("HOME")
-	if home == "" {
-		return "", fmt.Errorf("HOME environment variable is invalid")
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home := os.Getenv("HOME")
+		if home == "" {
+			return "", fmt.Errorf("HOME environment variable is invalid")
+		}
+		dataHome = path.Join(home, ".local/share")
 	}
 
-	return path.Join(home, T_BASE_DIR), nil
+	return path.Join(dataHome, "t"), nil
 }
