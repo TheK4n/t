@@ -1,5 +1,3 @@
-//go:generate go run version_gen.go
-
 package main
 
 import (
@@ -18,6 +16,8 @@ import (
 
 const DEFAULT_NAMESPACE = "def"
 const ENVFILE = ".tns"
+
+var version string = "built-from-source"
 
 var COMMANDS = map[string]func(storage.TasksStorage, []string, string) error{
 	"show": cmdShow,

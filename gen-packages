@@ -1,26 +1,23 @@
 #!/bin/sh
 
+set -eu
 
 build() {
     arch="${1}"
-    go generate ./...
-    go fmt ./...
-    GOOS=linux GOARCH="${arch}" go build -ldflags "-w -s" -o ./t ./cmd/t
+    GOOS=linux GOARCH="${arch}" ./make
 }
 
 build_android_arm64() {
-    go generate ./...
-    go fmt ./...
     CGO_ENABLED=1 \
     GOOS="android" \
     GOARCH="arm64" \
     CC="aarch64-linux-android21-clang" \
-    go build -ldflags "-w -s" -o ./t ./cmd/t
+    ./make
 }
 
 pack() {
     arch="${1}"
-    tar czf "t_v$(cat VERSION)_linux_${arch}.tar.gz" ./t
+    tar -C bin/ -czf "t_$(git describe --tags --abbrev=0)_linux_${arch}.tar.gz" t
 }
 
 build_and_pack() {
@@ -31,7 +28,7 @@ build_and_pack() {
 
 build_and_pack_android() {
     build_android_arm64
-    tar czf "t_v$(cat VERSION)-android_arm64.tar.gz" ./t
+    tar -C bin/ -czf "t_$(git describe --tags --abbrev=0)_android_arm64.tar.gz" t
 }
 
 build_and_pack "arm64"
